@@ -9,98 +9,250 @@ Al registrarse en la plataforma, los jugadores pueden asociar una o varias cuent
 Cada jugador inicia con un balance inicial de 100 puntos (pts) dentro de la plataforma.
 
 # Tables:
-## Users:
-- userID PK
+
+# ==========================
+# LOG
+# ==========================
+
+## logTypes
+- id (PK)
+- code varchar(20) (UNIQUE)   -- USER, AI, SYSTEM, SECURITY
+- description varchar(100)
+
+## Event
+eventTypes
+- id (PK)
+- code varchar(20) (UNIQUE) 
+- description varchar(100)
+
+## SEv
+severities
+- id (PK)
+- code varchar(20) (UNIQUE)
+- level varchar(10)
+
+## Sources
+sources
+- id (PK)
+- code (UNIQUE)
+- description varchar(100)
+
+## DataObjects
+dataObjects
+- id (PK)
+- code (UNIQUE)
+- description varchar(100)
+
+## logs
+logs
+- id (PK)
+- logTypeId (FK -> logTypes.id)
+- eventTypeId (FK -> eventTypes.id)
+- severityId (FK -> severities.id)
+- sourceId (FK -> sources.id)
+- dataObjectId (FK -> dataObjects.id)
+- description varchar(100)
+- objectId1 BIGINT NULL
+- objectId2 BIGINT NULL
+- referenceId1 BIGINT NULL
+- referenceId2 BIGINT NULL
+- referenceDescription varchar(100)
+- userId (FK -> users.id, NULL)
+- computer BYTEA
+- checksum BYTEA
+- postTime TIMESTAMP
+
+
+# =========================
+# Address Pattern (hasta estados pues es lo que se necesita)
+# =========================
+
+## COUNTRIES
+countries
+- id (PK)
+- name varchar(60) --pais mas largo contiene 50 caracteres
+
+## STATES
+states
+- id (PK)
+- countryId (FK -> countries.id) 
+- name varchar(100) -- estado mas largo contiene 85 caracteres
+
+# =========================
+# CURRENCIES PATTERN
+# =========================
+
+# CURRENCIES
+currencies
+- id (PK) 
+- name varchar(20)
+- symbol varchar(5)
+- enabled BOOLEAN
+- postTime TIMESTAMP
+- userId (FK -> users.id)
+- countryId (FK -> countries.id)
+
+# EXCHANGERATES
+exchangeRates
+- id (PK)
+- fromCurrencyId (FK -> currencies.id)
+- toCurrencyId (FK -> currencies.id)
+- rate DECIMAL
+- date DATE
+- createdAt DATE
+- postTime TIMESTAMP
+- userId (FK -> users.id)
+- checkSum BYTEA
+- iscurrent BOOLEAN
+
+# EXCHANGEHISTORY
+exchangeHistory
+- id (PK)
+- fromCurrencyId (FK -> currencies.id)
+- toCurrencyId (FK -> currencies.id)
+- rateToUsd DECIMAL
+- startDateTime DATE
+- endDateTime DATE
+- postTime TIMESTAMP
+- checkSum BYTEA
+- userId (FK -> users.id)
+- exchangeRateId (FK -> exchangeRates.id)
+- iscurrent BOOLEAN
+
+# =========================
+# IMPUESTOS
+# =========================
+
+# Datos historicos de los paises
+
+## taxTypes
+- id (PK)
+- code varchar(30) (UNIQUE)  -- VAT, IMPORT_DUTY, SALES_TAX
+
+## countryTaxes 
+- id (PK)
+- countryId (FK -> countries.id)
+- percentage DECIMAL NULL 
+- flatflee DECIMAL NULL
+- validFrom DATE
+- validTo DATE
+- createdAt DATE
+- createdBy (FK -> users.id)
+- enabled BOOLEAN
+- updatedAt DATE
+- updatedBy (FK -> users.id)
+
+## taxes
+- id (PK)
+- taxTypeId (FK -> taxTypes.id)
+- countryTaxId (FK -> countryTaxes.id)
+- validFrom DATE
+- validTo DATE
+- createdAt DATE
+- createdBy (FK -> users.id)
+- enabled BOOLEAN
+- updatedAt DATE
+- updatedBy (FK -> users.id)
+
+
+# =========================
+# ESPECÍFICO DEL CASO
+# =========================
+
+
+## Roletype
+- id PK
+- code varchar(30) UNIQUE
+
+## User
+- id PK
 - name varchar(20)
 - lastName varchar(20)
 - email varchar(254)
 - enabled boolean
+- roletypeid (FK -> roletype.id)
 
-## Countries:
-- countryID PK
-- countryCommonName varchar(25)			-- Ej: 'Costa Rica', 'Estados Unidos', 'Japón'
-- countryOfficialName varchar(30)			-- Ej: 'República de Costa Rica', 'Estados Unidos de América', 'Japón'
-- isoCode char(3)			-- Ej: 'CRC', 'USA', 'JAP'
-- taxRate decimal(5,4)
-- enabled boolean
+## SocialMedia
+- id PK
+- description varchar(20) UNIQUE     -- Instagram, TikTok, etc.
 
-## States:
-- stateID PK
-- countryID FK
-- stateName varchar(20)			-- Ej: 'Alajuela', 'Buenos Aires', 'Ciudad de Guatemala'
-- isoCode varchar(10)			-- Ej: 'CR-A', 'AR-C', 'GT-GU'
-- enabled boolean
+## Status
+- id PK
+- status varchar(20) UNIQUE
 
-## Cities:
-- cityID PK
-- stateID FK
-- cityName varchar(30)			-- Ej: 'San Ramón', 'Medellín (Centro)', 'Santiago (Centro)'
-- enabled boolean
+## AiProcesses                -- Para ver si la IA acepta evidencia
+- id PK
+- processtype varchar(30)
+- url varchar(256)            -- link a la evidencia que manda el usuario de que completó el reto
+- socialMediaId (FK -> socialMedia.id)    -- si viene de tiktok, instagram, etc.
+- response varchar(150)       -- comentario de la IA sobre la evidencia dada
+- statusId (FK -> statis.id)  -- para ver si IA acepta, rechaza, inconcluso
 
-## Addresses:
-- addressID PK
-- cityID FK
-- address1 varchar(30)
-- address2 varchar(30)
-- zipCode varchar(20)			-- Ej: '20201', '050001', '8320000'
-- geoPosition point
-- enabled boolean
+## Settings
+- id PK
+- pointsPerEvent integer      -- Para configurar los puntos que se pueden apostar
 
-## Currencies:
-- currencyID PK
-- currencySymbol char(1)
-- currencyName varchar(10)
-- countryID FK
-- userID FK
-- createdAt TIMESTAMP
-- updatedAt TIMESTAMP
-- createdBy FK			-- UserID
-- updatedBy FK			-- UserID
+## Audit
+- id PK
+- createdDate datetime
+- updateDate datetime
+- status varchar(50)
+- createdBy (FK -> user.id)
+- checksum VARBINARY
+
+## PaymentType
+- id PK
+- code varchar(20) UNIQUE
+
+## OperationType
+- id PK
+- code varchar(20) UNIQUE -- si es compra, ingreso de dinero, etc.
 - enabled BOOLEAN
-- checksum binary(32)
 
-## ExchangeRates:
-- exchangeRateID PK
-- currencyID1 FK			-- Divisa base
-- currencyID2	FK			-- Divisa destino
-- exchangeRate decimal(20,4)			-- Factor multiplicativo
+## PaymentMethod
+- id PK
+- configuration json
 - postTime TIMESTAMP
-- userID FK
-- post timestamp
-- checksum bytea
-- enabled boolean
+- userid (FK -> users.id)
+- amount NUMERIC()
+- currencyId (FK -> currencies.id)
 
-## ExchangeHistories:
-- exchangeHistoryID PK
-- startDate TIME
-- endDate TIME
-- exchangeRateID FK			-- tasa De Cambio Actual
-- currencyID1 FK			-- Divisa base
-- currencyID2	FK			-- Divisa destino
-- exchangerate decimal(20,4)			-- Factor multiplicativo
-- userID FK
-- post timestamp
-- checksum bytea
-
-## Logs:
-- logID PK
-- eventTypeID FK
-- description varchar(255)
-- sourceID FK
-- severityID FK
-- postTime Timestamp
-- userID FK
-- checksum BYTEA
-- dataObjectID1 FK
-- dataObjectID2 FK
-
-## EventTypes:
-- EventTypeID PK
-- LogType varchar(30)
-- createdAt TIMESTAMP
-- updatedAt TIMESTAMP
-- createdBy FK			-- UserID
-- updatedBy FK			-- UserID
+## PaymentAttempt              -- para registrar cuando intenta hacer un pago el usuario
+- id PK
 - enabled BOOLEAN
-- checksum BYTEA
+- apiUrl varchar(256)
+- paymentmethod (FK -> paymentmethod.id)
+- auditId (FK -> audit.id)
+- source varchar(20)
+- paymentTypeId (FK -> paymentType.id)
+- checksum VARBINARY
+- computer VARBINARY
+- createdAt DATE
+- postTime TIMESTAMP
 
+# =========================
+# TRANSACCIONES FINANCIERAS
+# =========================
+
+## TRANSACTION TYPES
+- id (PK)
+- code varchar(20) (UNIQUE)
+- description varchar(60)
+- createdAt DATE
+- createdBy (FK -> users.id)
+
+## TRANSACTIONS
+- id (PK)
+- typeId (FK -> transactionTypes.id)
+- date DATE
+- description varchar(80)
+- amount DECIMAL
+- currencyId (FK -> currencies.id)
+- exchangeRateId (FK -> exchangeRates.id)
+- relatedOrderId (FK -> orders.id) allows null
+- referenceType varchar(30) allows null
+- referenceId BIGINT allows null
+- externalReference varchar(80) allows null
+- createdBy (FK -> users.id)
+- createdAt DATE
+- checkSum BYTEA
