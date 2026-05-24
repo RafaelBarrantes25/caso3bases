@@ -4,3 +4,5 @@
     * Mejoras al markdown de la base de datos
 # v0.1.1
     * Actualización en el archivo logs
+# v0.1.2
+    * Avances con el diseño de la base en el markdown
