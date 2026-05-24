@@ -1,3 +1,7 @@
+# Preguntas:
+# debe tener sinpe o cosas nacionales o con solo paypal?
+# propositions debe tener history?
+#
 # Database engine: SQLServer
 
 Database name: Gathel
@@ -181,25 +185,55 @@ exchangeHistory
 - updatedBy (FK -> user.id)
 - addressId (FK -> addresses.id)
 
+## SocialMediaPerUser
+- id PK
+- userid (FK -> users.id)
+- socialMediaid (FK- socialMedia.id)
+- accountUsername varchar(40)
+- accountUrl varchar(255) NULL
+- accessToken varchar(255) NULL
+- enabled BOOLEAN
+- authorizedAt TIMESTAMP
+- createdAt DATE
+- checksum VARBINARY
+
 ## SocialMedia
 - id PK
 - description varchar(20) UNIQUE     -- Instagram, TikTok, etc.
 
-## Status
+## aiStatus                  -- La respuesta que dio la IA al revisar la evidencia
 - id PK
 - status varchar(20) UNIQUE
 
-## AiProcesses                -- Para ver si la IA acepta evidencia
+## ProcessType
 - id PK
-- processtype varchar(30)
-- url varchar(256)            -- link a la evidencia que manda el usuario de que completó el reto
+- processType varchar(30) UNIQUE
+
+## AiProcesses                            -- Para ver si la IA acepta evidencia
+- id PK
+- userId (FK -> user.id)
+- url varchar(256)                        -- link a la evidencia que manda el usuario de que completó el reto
 - socialMediaId (FK -> socialMedia.id)    -- si viene de tiktok, instagram, etc.
-- response varchar(150)       -- comentario de la IA sobre la evidencia dada
-- statusId (FK -> statis.id)  -- para ver si IA acepta, rechaza, inconcluso
+- response varchar(200)                   -- comentario de la IA sobre la evidencia dada
+- aiStatusId (FK -> aiStatus.id)          -- para ver si IA acepta, rechaza, inconcluso
+- processTypeId (FK -> processType.id)
+- requestJson NVARCHAR(MAX)
+- responseJson NVARCHAR(MAX)
+- createdAt DATE
+- checksum VARBINARY
 
 ## Settings
 - id PK
 - pointsPerEvent integer      -- Para configurar los puntos que se pueden apostar
+- initialPlayerPoints integer DEFAULT 100
+- rejectPenaltyPercentage integer       -- penalización por aceptar el reto y después retractarse
+- unverifiablePenaltyPercentage integer -- penalización si no se puede verificar el reto
+- proposerEarningsPercentage integer    -- ganancias del que cumple el reto
+- platformEarningsPercentage integer    -- ganancias de la plataforma
+- enabled BOOLEAN
+- updatedBy (FK -> users.id)
+- updatedAt DATE
+- successfulPredictionPercentage integer -- cuántos puntos obtienen los usuarios ganadores
 
 ## auditType
 - id (PK)
@@ -305,7 +339,7 @@ paymentCards
 - id (PK)
 - userId (FK -> users.id)
 - cardHolderName varchar(80)
-- paymentCardTypeId (FK -> paymentCardType.id)                  
+- paymentCardTypeId (FK -> paymentCardType.id)
 - lastFourDigits char(4)
 - expirationMonth tinyint
 - expirationYear smallint
@@ -393,7 +427,7 @@ paymentValidationTypes
 # Esta tabla clasifica los tipos de validación que se realizan sobre un intento de pago.
 # Es necesaria porque no todos los métodos de pago se validan igual.
 # Una tarjeta requiere validar token, fondos y respuesta del proveedor.
-# SINPE requiere validar que sea una operación interna o del mismo país.
+# SINPE requiere vBusinealidar que sea una operación interna o del mismo país.
 
 ## paymentValidationStatus
 paymentValidationStatus
@@ -446,6 +480,157 @@ transactions
 - externalReference varchar(100) NULL
 - balanceAfterPoints DECIMAL(18,2)
 - balanceAfterMoney DECIMAL(18,2)
-- createdBy INT (FK -> users.id)
-- createdAt DATETIME2
+- balanceBeforePoints DECIMAL(18,2)
+- balanceBeforeMoney DECIMAL(18,2)
+- createdBy (FK -> users.id)
+- createdAt DATETIME
 - checksum VARBINARY(32)
+
+## Business
+- id PK
+- businessName varchar(40)
+- countryId (FK -> countries.id)
+- contactEmail varchar(255)
+- contactPhone varchar(20)
+- enabled BOOLEAN
+- createdBy (FK -> users.id)
+- createdAt DATETIME
+- updatedAt DATETIME
+- updatedBy (FK -> users.id)
+- checksum VARBINARY(32)
+
+
+## quantityType
+- id (PK)
+- code varchar(20) (UNIQUE) -- bottles, pair
+
+## unitMeasurement
+- id (PK)
+- code varchar(20) (UNIQUE) -- cm, dl, om
+
+# Catalogo de caracteristicas variables que puede tener un producto.
+# Ejemplo: color, material, tamaño, capacidad, RAM, CPU
+
+## productCharacteristics
+- id (PK)
+- name varchar(60)
+
+
+## RedeemableProducts
+- id PK
+- businessId (FK -> business.id)
+- productName varchar(100)
+- description varchar(255)
+- stock integer
+- unitMeasurementId (FK -> unitMeasurement.id)
+- quantityTypeId (FK -> quanityType.id)
+- checksum VARBINARY
+- createdAt DATE
+- createdBy (FK -> users.id)
+- enabled BOOLEAN
+- updatedAt DATE
+- updatedBy (FK -> users.id)
+- currencyId (FK -> currencies.id)
+- amount float
+
+## RedemptionStatus
+- id PK
+- status varchar(30) UNIQUE
+
+## ProductRedemption
+- id PK
+- userId (FK -> users.id)
+- redeemableProductsId (FK -> redeemableProducts.id)
+- currencyId (FK -> currrencies.id)
+- amountSpent NUMERIC
+- redeemedAt DATETIME
+- checksum VARBINARY
+- transactionId (FK -> transactions.id)
+- redemptionStatusId (FK -> redemptionStatus.id)
+
+# Relacion entre el producto y sus caracteristicas variables.
+# Ejemplo: Laptop -> RAM = 16GB
+
+## productCharacteristicPerProduct
+- id (PK)
+- redeemableProductId (FK -> redeemableProduct.id)
+- productCharacteristicId (FK -> productCharacteristics.id)
+- value varchar(100)
+
+# =========================
+# Proposiciones, predicciones y eventos
+# =========================
+
+## EventStatus                        -- Si está en revisión, ejecutándose, en votación...
+- id PK
+- status varchar(30) UNIQUE
+
+## Events
+- id PK
+- eventName varchar(50)
+- creatorUser (FK -> users.id)
+- eventStatus (FK -> eventStatus.id)
+- description varchar(200)
+- createdAt DATE
+
+## PropositionStatus
+- id PK
+- status varchar(30) UNIQUE
+
+## Propositions
+- id PK
+- title varchar(100)
+- description varchar(200)
+- numberOfVotes integer
+- proposedBy (FK -> user.id)
+- proposedTo (FK -> user.id)
+- propositionStatusid (FK -> propositionStatus.id)
+- currencyId (FK -> currency.id)
+- createdAt DATE
+- votingStarts TIMESTAMP
+- votingClosesAt TIMESTAMP
+- acceptedAt DATE
+- rejectedAt DATE
+- enabled BOOLEAN
+- checksum VARBINARY
+
+## PropositionsPerEvent
+- id PK
+- eventId (FK -> events.id)
+- propositionId (FK -> propositions.id)
+
+## PropositionVotes
+- id PK
+- userId (FK -> users.id)
+- propositionsId (FK -> propositions.id)
+- checksum VARBINARY
+- votedAt TIMESTAMP
+
+## ResultType
+- id PK
+- code varchar(30) UNIQUE
+
+## PropositionResult
+- id PK
+- resultTypeId (FK -> resultType.id)
+- aiProcessId (FK -> aiProcess.id)
+- propositionId (FK -> propositions.id)
+- resultAt DATE
+- checksum VARBINARY
+
+## PredictionType
+- id PK
+- code varchar(40) UNIQUE
+
+## Predictions                     -- no hay predictionsPerUser porque cada usuario solo tiene una predicción por proposición
+- id PK
+- predictionTypesId (FK -> predictionTypes.id)
+- predictedBy (FK -> users.id)
+- propositionId (FK -> proposition.id)
+- currencyId (FK -> currencies.id)
+- amount float
+- winnerAmount float                     -- cuánto ganó el que hizo al predicción
+- createdAt DATE
+- enabled BOOLEAN
+- winner BOOLEAN
+- checksum VARBINARY

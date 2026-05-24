@@ -6,3 +6,5 @@
     * Actualización en el archivo logs
 # v0.1.2
     * Avances con el diseño de la base en el markdown
+# v0.1.3
+    * Finalización del markdown
