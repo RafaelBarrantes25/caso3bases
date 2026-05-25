@@ -8,3 +8,5 @@
     * Avances con el diseño de la base en el markdown
 # v0.1.3
     * Finalización del markdown
+# v0.1.4
+    * Creación del script de tablas y el pdf de la base
