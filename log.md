@@ -10,3 +10,5 @@
     * Finalización del markdown
 # v0.1.4
     * Creación del script de tablas y el pdf de la base
+# v0.1.5
+    * Avances con el seeding
