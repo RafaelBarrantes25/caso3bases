@@ -12,3 +12,5 @@
     * Creación del script de tablas y el pdf de la base
 # v0.1.5
     * Avances con el seeding
+# v0.1.6
+    * Creacion de scripts para flyway, creacion de configuracion de flyway, reorganizacion del github. 

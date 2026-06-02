@@ -1,0 +1,53 @@
+Flyway en la Semana 1 del proyecto Gathel
+
+Flyway se utiliza en Gathel como herramienta de migraciones para administrar los cambios de la base de datos SQL Server. Su función es ejecutar scripts SQL en orden, registrar qué migraciones ya fueron aplicadas y garantizar que el esquema de base de datos pueda reproducirse en distintos ambientes.
+
+Durante la Semana 1, Flyway se utiliza para tomar el script de creación de tablas ya existente y convertirlo en la primera migración formal del proyecto. El script de creación no se modifica; se conserva como V1__create_schema.sql. A partir de ese script se agregan nuevas migraciones separadas para insertar catálogos, insertar datos base y crear consultas de validación.
+
+La configuración de Flyway se realiza mediante el archivo flyway.conf. Este archivo define la conexión hacia SQL Server, el nombre de la base de datos Gathel, el usuario, la contraseña y la ubicación de los scripts de migración. Para el ambiente local se utiliza una conexión JDBC hacia SQL Server con databaseName=Gathel.
+
+El orden de uso durante la Semana 1 es el siguiente:
+
+1. Crear la base de datos Gathel si todavía no existe.
+2. Colocar el script actual de creación de tablas como V1__create_schema.sql.
+3. Configurar flyway.conf.
+4. Ejecutar flyway info para revisar las migraciones pendientes.
+5. Ejecutar flyway migrate para aplicar la migración V1.
+6. Revisar que Flyway cree la tabla flyway_schema_history.
+7. Crear y ejecutar V2__insert_catalogs.sql para insertar catálogos base.
+8. Crear y ejecutar V3__seed_base_data.sql para insertar datos mínimos de prueba.
+9. Crear y ejecutar V4__week1_validation_queries.sql para crear vistas de validación.
+10. Guardar evidencia de las migraciones ejecutadas.
+
+Las migraciones de Semana 1 son:
+
+01_scriptCreacionTablas:
+Crea la estructura física de la base de datos Gathel. Incluye tablas, llaves primarias, llaves foráneas, restricciones, checks e índices.
+
+02_insertarCatalogos.sql:
+Inserta catálogos iniciales como roles, tipos de pago, estados de pago, tipos de operación, tipos de transacción, estados de proposición, estados de IA, tipos de predicción, tipos de resultado, tipos de logs, severidades y fuentes.
+
+03_baseDeInformacion.sql:
+Inserta datos mínimos de prueba como país, estado, dirección, usuario administrador, usuario jugador, monedas, wallets iniciales, configuración base, métodos de pago, tarjeta tokenizada de prueba, comercio afiliado y producto canjeable.
+
+04_validaciones.sql:
+Crea vistas de validación para revisar conteos de tablas, usuarios con wallets y métodos de pago. También incluye consultas útiles para evidenciar tablas, llaves foráneas e índices creados.
+
+Flyway registra todas las migraciones ejecutadas en la tabla flyway_schema_history. Esta tabla permite demostrar qué scripts fueron ejecutados, en qué orden y con qué resultado. También permite detectar si una migración ya aplicada fue modificada posteriormente mediante el checksum.
+
+La regla principal es no modificar migraciones ya ejecutadas. Si después de ejecutar V1 se requiere cambiar una tabla, no se debe editar V1. En su lugar se debe crear una nueva migración, por ejemplo V5__alter_payment_attempts_add_column.sql.
+
+La evidencia esperada para Semana 1 es:
+
+- Captura o resultado de flyway info.
+- Captura o resultado de flyway migrate.
+- Consulta de flyway_schema_history.
+- Consulta de tablas creadas en sys.tables.
+- Consulta de llaves foráneas en sys.foreign_keys.
+- Consulta de índices en sys.indexes.
+- Consulta de vw_week1_table_counts.
+- Consulta de vw_week1_users_wallets.
+- Consulta de vw_week1_payment_methods.
+
+Semana 1 acabada.
+
