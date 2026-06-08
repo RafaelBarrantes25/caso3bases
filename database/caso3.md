@@ -1,636 +1,1465 @@
-# Preguntas:
-# debe tener sinpe o cosas nacionales o con solo paypal?
-# propositions debe tener history?
-#
+# Preguntas pendientes
+
+# ¿Debe tener SINPE o cosas nacionales o con solo PayPal?
+
+Se recomienda mantener soporte para varios métodos de pago, pero sin almacenar información sensible de tarjetas.
+El sistema puede soportar SINPE, PayPal, tarjeta mediante procesador externo y balance interno, pero Gathel solo registra el intento de pago y la respuesta del proveedor.
+
+# ¿Propositions debe tener history?
+
+Sí. Se recomienda agregar una tabla `propositionStatusHistory` para registrar los cambios de estado de cada proposición.
+Esto permite demostrar cómo una proposición pasó por revisión de IA, votación, aceptación, ejecución, validación o cancelación.
+
 # Database engine: SQLServer
 
-Database name: Gathel
+# Database name: Gathel
 
-Context:Gathel es un juego digital de predicciones basado en acciones y eventos de la vida real de las personas, validados mediante redes sociales e inteligencia artificial.
+# Contexto
 
-Al registrarse en la plataforma, los jugadores pueden asociar una o varias cuentas de redes sociales, por ejemplo Instagram o TikTok. Esto permite que Gathel solicite autorización para acceder automáticamente a publicaciones, historias, reels, videos y demás contenido público o autorizado por el usuario.
+Gathel es un juego digital de predicciones basado en acciones y eventos de la vida real de las personas, validados mediante redes sociales e inteligencia artificial.
 
-Cada jugador inicia con un balance inicial de 100 puntos (pts) dentro de la plataforma.
+Al registrarse en la plataforma, los jugadores pueden asociar una o varias cuentas de redes sociales, por ejemplo Instagram, TikTok u otras plataformas. Esto permite que Gathel solicite autorización para acceder automáticamente a publicaciones, historias, reels, videos y demás contenido público o autorizado por el usuario.
 
-# Tables:
+Cada jugador inicia con un balance inicial de 100 puntos dentro de la plataforma.
+
+Los puntos no se manejan como una columna separada, sino como una moneda virtual dentro de la tabla `currencies`. De esta forma, los puntos y el dinero real se administran mediante el mismo modelo de billeteras y transacciones.
+
+Cuando un usuario intenta hacer un pago, primero se registra el intento en `paymentAttempts`. Si el pago es aprobado, se genera una transacción en `transactions`. Si el pago falla, queda registrado el intento, pero no se modifica el balance del usuario.
+
+La inteligencia artificial se usa para revisar proposiciones, validar contenido ético, analizar evidencia de redes sociales y determinar si una proposición se cumplió o no. Por eso, el modelo guarda proveedor, modelo, request, response, resultado y objeto sobre el cual se aplicó el análisis.
+
+---
+
+# Tables
 
 # ==========================
+
 # LOG
+
 # ==========================
 
 ## logTypes
-- id (PK)
-- code varchar(20) (UNIQUE)   -- USER, AI, SYSTEM, SECURITY
-- description varchar(100)
 
-## Event
+```text
+logTypes
+- id INT IDENTITY(1,1) PRIMARY KEY
+- code VARCHAR(20) NOT NULL UNIQUE        -- USER, AI, SYSTEM, SECURITY, PAYMENT
+- description VARCHAR(100) NOT NULL
+- enabled BIT NOT NULL
+```
+
+# Justificación:
+# Esta tabla clasifica el origen general del log.
+# Permite separar eventos generados por usuarios, procesos de IA, sistema, seguridad o pagos.
+
+---
+
+## eventTypes
+
+```text
 eventTypes
-- id (PK)
-- code varchar(20) (UNIQUE) 
-- description varchar(100)
+- id INT IDENTITY(1,1) PRIMARY KEY
+- code VARCHAR(30) NOT NULL UNIQUE        -- LOGIN, LOGOUT, INSERT, UPDATE, DELETE, PAYMENT_ATTEMPT, AI_REVIEW, TRANSACTION_CREATED
+- description VARCHAR(120) NOT NULL
+- enabled BIT NOT NULL
+```
 
-## SEv
+# Justificación:
+# Esta tabla normaliza los tipos de eventos que pueden quedar registrados en la bitácora.
+# No se debe confundir con la tabla Events anterior, porque aquí "event" significa evento de log, no evento de negocio.
+
+---
+
+## severities
+
+```text
 severities
-- id (PK)
-- code varchar(20) (UNIQUE)
-- level varchar(10)
+- id INT IDENTITY(1,1) PRIMARY KEY
+- code VARCHAR(20) NOT NULL UNIQUE        -- INFO, WARNING, ERROR, CRITICAL
+- level VARCHAR(10) NOT NULL
+- enabled BIT NOT NULL
+```
 
-## Sources
+# Justificación:
+# Permite clasificar la gravedad de cada registro de log.
+
+---
+
+## sources
+
+```text
 sources
-- id (PK)
-- code (UNIQUE)
-- description varchar(100)
+- id INT IDENTITY(1,1) PRIMARY KEY
+- code VARCHAR(40) NOT NULL UNIQUE        -- FRONTEND, BACKEND, DATABASE, AI_PROVIDER, PAYMENT_PROVIDER, SOCIAL_MEDIA
+- description VARCHAR(120) NOT NULL
+- enabled BIT NOT NULL
+```
 
-## DataObjects
+# Justificación:
+# Permite saber desde dónde se generó un evento.
+# Ejemplo: frontend, backend, base de datos, proveedor de IA, proveedor de pago o red social.
+
+---
+
+## dataObjects
+
+```text
 dataObjects
-- id (PK)
-- code (UNIQUE)
-- description varchar(100)
+- id INT IDENTITY(1,1) PRIMARY KEY
+- code VARCHAR(40) NOT NULL UNIQUE        -- USERS, PROPOSITIONS, PREDICTIONS, PAYMENT_ATTEMPTS, TRANSACTIONS, AI_PROCESS_LOGS
+- description VARCHAR(120) NOT NULL
+- enabled BIT NOT NULL
+```
+
+# Justificación:
+# Permite saber sobre qué objeto del sistema se generó el log.
+
+---
 
 ## logs
+
+```text
 logs
-- id (PK)
-- logTypeId (FK -> logTypes.id)
-- eventTypeId (FK -> eventTypes.id)
-- severityId (FK -> severities.id)
-- sourceId (FK -> sources.id)
-- dataObjectId (FK -> dataObjects.id)
-- description varchar(100)
+- id BIGINT IDENTITY(1,1) PRIMARY KEY
+- logTypeId INT NOT NULL FOREIGN KEY REFERENCES logTypes(id)
+- eventTypeId INT NOT NULL FOREIGN KEY REFERENCES eventTypes(id)
+- severityId INT NOT NULL FOREIGN KEY REFERENCES severities(id)
+- sourceId INT NOT NULL FOREIGN KEY REFERENCES sources(id)
+- dataObjectId INT NULL FOREIGN KEY REFERENCES dataObjects(id)
+- description VARCHAR(255) NOT NULL
 - objectId1 BIGINT NULL
 - objectId2 BIGINT NULL
 - referenceId1 BIGINT NULL
 - referenceId2 BIGINT NULL
-- referenceDescription varchar(100)
-- userId (FK -> users.id, NULL)
-- computer BYTEA
-- checksum BYTEA
-- postTime TIMESTAMP
+- referenceDescription VARCHAR(150) NULL
+- userId INT NULL FOREIGN KEY REFERENCES users(id)
+- computer VARBINARY(32) NULL
+- checksum VARBINARY(32) NOT NULL
+- postTime DATETIME2 NOT NULL
+```
 
+# Justificación:
 
-# =========================
-# Address Pattern (hasta estados pues es lo que se necesita)
-# =========================
+# Tabla central de bitácora.
+# Permite registrar operaciones relevantes del sistema sin crear una tabla de log distinta para cada módulo.
+# Se puede usar para auditoría de usuarios, pagos, IA, seguridad y operaciones de base de datos.
 
-## COUNTRIES
+---
+
+# ==========================
+# ADDRESS / GEO PATTERN
+# ==========================
+
+## countries
+
+```text
 countries
-- id (PK)
-- name varchar(60) --pais mas largo contiene 50 caracteres
+- id INT IDENTITY(1,1) PRIMARY KEY
+- name VARCHAR(60) NOT NULL
+- isoCode CHAR(2) NULL
+- enabled BIT NOT NULL
+```
 
-## STATES
+# Justificación:
+
+# Tabla de países.
+# El campo `isoCode` permite usar códigos como CR, US, MX, etc.
+
+---
+
+## states
+
+```text
 states
-- id (PK)
-- countryId (FK -> countries.id) 
-- name varchar(100) -- estado mas largo contiene 85 caracteres
+- id INT IDENTITY(1,1) PRIMARY KEY
+- countryId INT NOT NULL FOREIGN KEY REFERENCES countries(id)
+- name VARCHAR(100) NOT NULL
+- enabled BIT NOT NULL
+```
 
-# =========================
+# Justificación:
+
+# Representa provincias, estados o regiones dentro de un país.
+
+---
+
+## cities
+
+```text
+cities
+- id INT IDENTITY(1,1) PRIMARY KEY
+- stateId INT NOT NULL FOREIGN KEY REFERENCES states(id)
+- name VARCHAR(100) NOT NULL
+- enabled BIT NOT NULL
+```
+
+# Justificación:
+
+# Se agrega porque el diseño anterior tenía países y estados, pero faltaba el nivel de ciudad.
+
+---
+
+## addresses
+
+```text
+addresses
+- id BIGINT IDENTITY(1,1) PRIMARY KEY
+- cityId INT NOT NULL FOREIGN KEY REFERENCES cities(id)
+- addressLine1 VARCHAR(150) NOT NULL
+- addressLine2 VARCHAR(150) NULL
+- postalCode VARCHAR(20) NULL
+- latitude DECIMAL(9,6) NULL
+- longitude DECIMAL(9,6) NULL
+- createdAt DATETIME2 NOT NULL
+- updatedAt DATETIME2 NULL
+- checksum VARBINARY(32) NOT NULL
+```
+
+# Justificación:
+
+# Se agrega la tabla `addresses` porque el diseño anterior tenía referencias a `addressId`, pero no estaba definida.
+# También se agregan latitud y longitud de forma opcional para soportar geolocalización sin obligar a todos los registros a tener coordenadas exactas.
+
+---
+
+# ==========================
 # CURRENCIES PATTERN
-# =========================
+# ==========================
 
-# CURRENCIES
+## currencyTypes
+
+```text
+currencyTypes
+- id INT IDENTITY(1,1) PRIMARY KEY
+- code VARCHAR(20) NOT NULL UNIQUE        -- FIAT, VIRTUAL
+- description VARCHAR(100) NOT NULL
+- enabled BIT NOT NULL
+```
+
+# Justificación:
+
+# Permite diferenciar monedas reales de monedas virtuales.
+# Los puntos de Gathel se modelan como una moneda virtual.
+
+---
+
+## currencies
+
+```text
 currencies
-- id (PK) 
-- name varchar(20)
-- symbol varchar(5)
-- enabled BOOLEAN
-- postTime TIMESTAMP
-- userId (FK -> users.id)
-- countryId (FK -> countries.id)
+- id INT IDENTITY(1,1) PRIMARY KEY
+- currencyTypeId INT NOT NULL FOREIGN KEY REFERENCES currencyTypes(id)
+- code VARCHAR(10) NOT NULL UNIQUE        -- USD, CRC, EUR, PTS
+- name VARCHAR(40) NOT NULL
+- symbol VARCHAR(10) NOT NULL
+- countryId INT NULL FOREIGN KEY REFERENCES countries(id)
+- enabled BIT NOT NULL
+- createdAt DATETIME2 NOT NULL
+- updatedAt DATETIME2 NULL
+- checksum VARBINARY(32) NOT NULL
+```
 
-# EXCHANGERATES
+# Justificación:
+
+# Los puntos se unifican con el dinero mediante esta tabla.
+
+# En lugar de tener `pointsBalance` y `moneyBalance`, cada usuario tiene una billetera por moneda.
+
+# Ejemplo:
+
+# - CRC para colones
+
+# - USD para dólares
+
+# - PTS para puntos de Gathel
+
+---
+
+## exchangeRates
+
+```text
 exchangeRates
-- id (PK)
-- fromCurrencyId (FK -> currencies.id)
-- toCurrencyId (FK -> currencies.id)
-- rate DECIMAL
-- date DATE
-- createdAt DATE
-- postTime TIMESTAMP
-- userId (FK -> users.id)
-- checkSum BYTEA
-- iscurrent BOOLEAN
+- id INT IDENTITY(1,1) PRIMARY KEY
+- fromCurrencyId INT NOT NULL FOREIGN KEY REFERENCES currencies(id)
+- toCurrencyId INT NOT NULL FOREIGN KEY REFERENCES currencies(id)
+- rate DECIMAL(18,6) NOT NULL
+- rateDate DATE NOT NULL
+- createdAt DATETIME2 NOT NULL
+- postTime DATETIME2 NOT NULL
+- createdBy INT NULL FOREIGN KEY REFERENCES users(id)
+- checksum VARBINARY(32) NOT NULL
+- isCurrent BIT NOT NULL
+```
 
-# EXCHANGEHISTORY
+# Justificación:
+
+# Registra el tipo de cambio entre monedas.
+
+# Se usa cuando una transacción necesita conversión entre monedas.
+
+---
+
+## exchangeHistory
+
+```text
 exchangeHistory
-- id (PK)
-- fromCurrencyId (FK -> currencies.id)
-- toCurrencyId (FK -> currencies.id)
-- rateToUsd DECIMAL
-- startDateTime DATE
-- endDateTime DATE
-- postTime TIMESTAMP
-- checkSum BYTEA
-- userId (FK -> users.id)
-- exchangeRateId (FK -> exchangeRates.id)
-- iscurrent BOOLEAN
+- id BIGINT IDENTITY(1,1) PRIMARY KEY
+- fromCurrencyId INT NOT NULL FOREIGN KEY REFERENCES currencies(id)
+- toCurrencyId INT NOT NULL FOREIGN KEY REFERENCES currencies(id)
+- rate DECIMAL(18,6) NOT NULL
+- startDateTime DATETIME2 NOT NULL
+- endDateTime DATETIME2 NULL
+- postTime DATETIME2 NOT NULL
+- checksum VARBINARY(32) NOT NULL
+- userId INT NULL FOREIGN KEY REFERENCES users(id)
+- exchangeRateId INT NOT NULL FOREIGN KEY REFERENCES exchangeRates(id)
+- isCurrent BIT NOT NULL
+```
 
-# =========================
+# Justificación:
+
+# Guarda el historial de cambios en tasas de cambio.
+
+# Permite saber qué tasa estaba vigente en un momento determinado.
+
+---
+
+# ==========================
+
 # IMPUESTOS
-# =========================
 
-# Datos historicos de los paises
+# ==========================
 
 ## taxTypes
-- id (PK)
-- code varchar(30) (UNIQUE)  -- VAT, IMPORT_DUTY, SALES_TAX
 
-## countryTaxes 
-- id (PK)
-- countryId (FK -> countries.id)
-- percentage DECIMAL NULL 
-- flatflee DECIMAL NULL
-- validFrom DATE
-- validTo DATE
-- createdAt DATE
-- createdBy (FK -> users.id)
-- enabled BOOLEAN
-- updatedAt DATE
-- updatedBy (FK -> users.id)
+```text
+taxTypes
+- id INT IDENTITY(1,1) PRIMARY KEY
+- code VARCHAR(30) NOT NULL UNIQUE        -- VAT, SALES_TAX, WITHDRAWAL_TAX, SERVICE_FEE
+- name VARCHAR(80) NOT NULL
+- description VARCHAR(150) NULL
+- enabled BIT NOT NULL
+```
 
-## taxes
-- id (PK)
-- taxTypeId (FK -> taxTypes.id)
-- countryTaxId (FK -> countryTaxes.id)
-- validFrom DATE
-- validTo DATE
-- createdAt DATE
-- createdBy (FK -> users.id)
-- enabled BOOLEAN
-- updatedAt DATE
-- updatedBy (FK -> users.id)
+# Justificación:
 
+# Normaliza los tipos de impuestos o cargos.
 
-# =========================
-# ESPECÍFICO DEL CASO
-# =========================
+# Ejemplo: IVA, impuesto de ventas, cargo por retiro o comisión de servicio.
 
+---
 
-## Roletype
-- id PK
-- code varchar(30) UNIQUE
+## countryTaxes
 
-## User
-- id PK
-- name varchar(20)
-- lastName varchar(20)
-- username varchar(30)
-- email varchar(254) UNIQUE
-- password VARBINARY
-- enabled boolean
-- checksum VARBINARY
-- createdAt DATE
-- updatedAt DATE
-- lastLogin DATE
-- roletypeid (FK -> roletype.id)
-- createdBy (FK -> user.id)
-- updatedBy (FK -> user.id)
-- addressId (FK -> addresses.id)
+```text
+countryTaxes
+- id INT IDENTITY(1,1) PRIMARY KEY
+- countryId INT NOT NULL FOREIGN KEY REFERENCES countries(id)
+- taxTypeId INT NOT NULL FOREIGN KEY REFERENCES taxTypes(id)
+- name VARCHAR(80) NOT NULL
+- percentage DECIMAL(9,4) NULL
+- flatFee DECIMAL(18,2) NULL
+- currencyId INT NULL FOREIGN KEY REFERENCES currencies(id)
+- validFrom DATE NOT NULL
+- validTo DATE NULL
+- enabled BIT NOT NULL
+- createdAt DATETIME2 NOT NULL
+- createdBy INT NULL FOREIGN KEY REFERENCES users(id)
+- updatedAt DATETIME2 NULL
+- updatedBy INT NULL FOREIGN KEY REFERENCES users(id)
+- checksum VARBINARY(32) NOT NULL
+```
 
-## SocialMediaPerUser
-- id PK
-- userid (FK -> users.id)
-- socialMediaid (FK- socialMedia.id)
-- accountUsername varchar(40)
-- accountUrl varchar(255) NULL
-- accessToken varchar(255) NULL
-- enabled BOOLEAN
-- authorizedAt TIMESTAMP
-- createdAt DATE
-- checksum VARBINARY
+# Justificación:
 
-## SocialMedia
-- id PK
-- description varchar(20) UNIQUE     -- Instagram, TikTok, etc.
+# Se elimina la estructura anterior separada entre `taxes` y `countryTaxes`, porque generaba una cardinalidad confusa.
 
-## aiStatus                  -- La respuesta que dio la IA al revisar la evidencia
-- id PK
-- status varchar(20) UNIQUE
+# Ahora cada impuesto por país tiene tipo, nombre, porcentaje o monto fijo, moneda y vigencia.
 
-## ProcessType
-- id PK
-- processType varchar(30) UNIQUE
+# Esto permite saber claramente el nombre del impuesto y dónde aplica.
 
-## AiProcesses                            -- Para ver si la IA acepta evidencia
-- id PK
-- userId (FK -> user.id)
-- url varchar(256)                        -- link a la evidencia que manda el usuario de que completó el reto
-- socialMediaId (FK -> socialMedia.id)    -- si viene de tiktok, instagram, etc.
-- response varchar(200)                   -- comentario de la IA sobre la evidencia dada
-- aiStatusId (FK -> aiStatus.id)          -- para ver si IA acepta, rechaza, inconcluso
-- processTypeId (FK -> processType.id)
-- requestJson NVARCHAR(MAX)
-- responseJson NVARCHAR(MAX)
-- createdAt DATE
-- checksum VARBINARY
+---
 
-## Settings
-- id PK
-- pointsPerEvent integer      -- Para configurar los puntos que se pueden apostar
-- initialPlayerPoints integer DEFAULT 100
-- rejectPenaltyPercentage integer       -- penalización por aceptar el reto y después retractarse
-- unverifiablePenaltyPercentage integer -- penalización si no se puede verificar el reto
-- proposerEarningsPercentage integer    -- ganancias del que cumple el reto
-- platformEarningsPercentage integer    -- ganancias de la plataforma
-- enabled BOOLEAN
-- updatedBy (FK -> users.id)
-- updatedAt DATE
-- successfulPredictionPercentage integer -- cuántos puntos obtienen los usuarios ganadores
+# ==========================
 
-## auditType
-- id (PK)
-- code varchar(30) (UNIQUE)              -- PAYMENT_VALIDATION, CARD_VALIDATION, SINPE_VALIDATION, COUNTRY_VALIDATION, FRAUD_CHECK
-- description varchar(100)
+# USERS / ROLES
 
-# Justrificacion: Normalizacion
-# Pregunta: Se normaliza validationStep?
+# ==========================
 
-## audits
-audits
-- id (PK)
-- paymentAttemptId (FK -> paymentAttempt.id)
-- auditTypeId (FK -> auditType.id)             
-- validationStep varchar(50)             -- STARTED, METHOD_CHECKED, CARD_CHECKED, COUNTRY_CHECKED, FUNDS_CHECKED, PROVIDER_RESPONSE, COMPLETED
-- paymentStatusesId (FK -> paymentStatuses.id)
+## roleTypes
+
+```text
+roleTypes
+- id INT IDENTITY(1,1) PRIMARY KEY
+- code VARCHAR(30) NOT NULL UNIQUE        -- ADMIN, PLAYER, BUSINESS, SUPPORT, READONLY
+- description VARCHAR(100) NOT NULL
+- enabled BIT NOT NULL
+```
+
+# Justificación:
+
+# Define los tipos principales de usuario dentro de Gathel.
+
+---
+
+## users
+
+```text
+users
+- id INT IDENTITY(1,1) PRIMARY KEY
+- name VARCHAR(40) NOT NULL
+- lastName VARCHAR(40) NOT NULL
+- username VARCHAR(40) NOT NULL UNIQUE
+- email VARCHAR(254) NOT NULL UNIQUE
+- password VARBINARY(256) NOT NULL
+- enabled BIT NOT NULL
+- checksum VARBINARY(32) NOT NULL
+- createdAt DATETIME2 NOT NULL
+- updatedAt DATETIME2 NULL
+- lastLogin DATETIME2 NULL
+- roleTypeId INT NOT NULL FOREIGN KEY REFERENCES roleTypes(id)
+- createdBy INT NULL FOREIGN KEY REFERENCES users(id)
+- updatedBy INT NULL FOREIGN KEY REFERENCES users(id)
+- addressId BIGINT NULL FOREIGN KEY REFERENCES addresses(id)
+```
+
+# Justificación:
+
+# Tabla principal de usuarios.
+
+# La contraseña se almacena como dato binario cifrado o hasheado, no como texto plano.
+
+# `addressId` es opcional porque no todos los usuarios necesitan registrar dirección.
+
+---
+
+# ==========================
+
+# SOCIAL MEDIA
+
+# ==========================
+
+## socialMedia
+
+```text
+socialMedia
+- id INT IDENTITY(1,1) PRIMARY KEY
+- code VARCHAR(30) NOT NULL UNIQUE        -- INSTAGRAM, TIKTOK, X, FACEBOOK, YOUTUBE
+- name VARCHAR(50) NOT NULL
+- enabled BIT NOT NULL
+```
+
+# Justificación:
+
+# Catálogo de redes sociales soportadas por Gathel.
+
+---
+
+## socialMediaAccounts
+
+```text
+socialMediaAccounts
+- id BIGINT IDENTITY(1,1) PRIMARY KEY
+- userId INT NOT NULL FOREIGN KEY REFERENCES users(id)
+- socialMediaId INT NOT NULL FOREIGN KEY REFERENCES socialMedia(id)
+- accountUsername VARCHAR(80) NOT NULL
+- accountUrl VARCHAR(255) NULL
+- externalAccountId VARCHAR(120) NULL
+- accessToken VARBINARY(MAX) NULL
+- refreshToken VARBINARY(MAX) NULL
+- authorizedAt DATETIME2 NULL
+- tokenExpiresAt DATETIME2 NULL
+- enabled BIT NOT NULL
+- createdAt DATETIME2 NOT NULL
+- checksum VARBINARY(32) NOT NULL
+```
+
+# Justificación:
+
+# Representa las cuentas de redes sociales asociadas por un usuario.
+
+# Los tokens se guardan como binarios cifrados o referencias seguras, no como texto plano.
+
+# Esta tabla reemplaza y mejora `SocialMediaPerUser`.
+
+---
+## socialMediaPostsTypes
+
+```text
+socialMediaPostsTypes
+- id BIGINT IDENTITY(1,1) PRIMARY KEY
+- code VARCHAR(30) NOT NULL UNIQUE        -- POST, STORY, REEL, VIDEO, COMMENT
+- description VARCHAR(100) NOT NULL
+- enabled BIT NOT NULL
+```
+
+# Justificacion
+# Normalizacion
+
+---
+
+## socialMediaPosts
+
+```text
+socialMediaPosts
+- id BIGINT IDENTITY(1,1) PRIMARY KEY
+- socialMediaAccountId BIGINT NOT NULL FOREIGN KEY REFERENCES socialMediaAccounts(id)
+- externalPostId VARCHAR(120) NULL
+- postUrl VARCHAR(500) NOT NULL
+- postTypeId BIGINT NOT NULL FOREIGN KEY REFERENCES socialMediaPostsTypes(id)
+- caption NVARCHAR(500) NULL
+- postedAt DATETIME2 NULL
+- capturedAt DATETIME2 NOT NULL
+- checksum VARBINARY(32) NOT NULL
+```
+
+# Justificación:
+
+# Guarda las publicaciones, historias, reels, videos o comentarios que originan proposiciones o sirven como evidencia.
+
+# Esto permite mapear exactamente cuál publicación de red social está relacionada con una proposición.
+
+---
+## propositionSourcePostsUse
+
+```text
+propositionSourcePostUse
+- id BIGINT IDENTITY(1,1) PRIMARY KEY   -- ORIGIN, EVIDENCE, RESULT_VALIDATION
+- code VARCHAR(30) NOT NULL UNIQUE        
+- description VARCHAR(100) NOT NULL
+- enabled BIT NOT NULL
+```
+
+---
+## propositionSourcePosts
+
+```text
+propositionSourcePosts
+- id BIGINT IDENTITY(1,1) PRIMARY KEY
+- propositionId BIGINT NOT NULL FOREIGN KEY REFERENCES propositions(id)
+- socialMediaPostId BIGINT NOT NULL FOREIGN KEY REFERENCES socialMediaPosts(id)
+- sourceUseId BIGINT NOT NULL FOREIGN KEY REFERENCES propositionSourcePostUse(id)
+- createdAt DATETIME2 NOT NULL
+
+UNIQUE(propositionId, socialMediaPostId, sourceUse)
+```
+
+# Justificación:
+
+# Relaciona una proposición con las publicaciones que la originaron o que sirvieron como evidencia.
+
+# Es necesaria porque Gathel depende de contenido de redes sociales para crear y validar proposiciones.
+
+---
+
+# ==========================
+
+# AI PROCESS LOGS
+
+# ==========================
+
+## aiProviders
+
+```text
+aiProviders
+- id INT IDENTITY(1,1) PRIMARY KEY
+- code VARCHAR(40) NOT NULL UNIQUE        -- OPENAI, GEMINI, CLAUDE, LOCAL_MODEL
+- name VARCHAR(80) NOT NULL
+- enabled BIT NOT NULL
+```
+
+# Justificación:
+
+# Catálogo de proveedores de inteligencia artificial.
+
+---
+
+## aiModels
+
+```text
+aiModels
+- id INT IDENTITY(1,1) PRIMARY KEY
+- aiProviderId INT NOT NULL FOREIGN KEY REFERENCES aiProviders(id)
+- modelName VARCHAR(100) NOT NULL
+- version VARCHAR(50) NULL
+- enabled BIT NOT NULL
+```
+
+# Justificación:
+
+# Permite registrar qué modelo específico se usó para una revisión.
+
+# Ejemplo: proveedor OpenAI, Gemini o Claude, con su respectivo modelo.
+
+---
+
+## aiProcessTypes
+
+```text
+aiProcessTypes
+- id INT IDENTITY(1,1) PRIMARY KEY
+- code VARCHAR(60) NOT NULL UNIQUE        -- PROPOSITION_CREATION_REVIEW, ETHICAL_REVIEW, RESULT_VALIDATION, FRAUD_REVIEW
+- description VARCHAR(150) NOT NULL
+- enabled BIT NOT NULL
+```
+
+# Justificación:
+
+# Define para qué se usó la IA.
+
+# Puede ser para crear proposiciones, revisar contenido antiético, validar resultados o detectar fraude.
+
+---
+
+## aiResults
+
+```text
+aiResults
+- id INT IDENTITY(1,1) PRIMARY KEY
+- code VARCHAR(40) NOT NULL UNIQUE        -- APPROVED, REJECTED, INCONCLUSIVE, NEEDS_MORE_EVIDENCE, ERROR
+- description VARCHAR(150) NOT NULL
+- enabled BIT NOT NULL
+```
+
+# Justificación:
+
+# Normaliza los posibles resultados de una revisión de IA.
+
+---
+
+## aiProcessLogs
+
+```text
+aiProcessLogs
+- id BIGINT IDENTITY(1,1) PRIMARY KEY
+- aiModelId INT NOT NULL FOREIGN KEY REFERENCES aiModels(id)
+- aiProcessTypeId INT NOT NULL FOREIGN KEY REFERENCES aiProcessTypes(id)
+- aiResultId INT NOT NULL FOREIGN KEY REFERENCES aiResults(id)
+- userId INT NULL FOREIGN KEY REFERENCES users(id)
+- propositionId BIGINT NULL FOREIGN KEY REFERENCES propositions(id)
+- socialMediaPostId BIGINT NULL FOREIGN KEY REFERENCES socialMediaPosts(id)
+- appliedObjectType VARCHAR(50) NOT NULL  -- PROPOSITION, SOCIAL_POST, RESULT, PAYMENT_ATTEMPT
+- appliedObjectId BIGINT NOT NULL
+- prompt NVARCHAR(MAX) NULL
 - requestJson NVARCHAR(MAX) NULL
 - responseJson NVARCHAR(MAX) NULL
-- validationMessage varchar(255) NULL
-- externalReference varchar(100) NULL
-- createdDate DATETIME2
-- updateDate DATETIME2 NULL
-- createdBy INT (FK -> users.id)
-- checksum VARBINARY(32)
+- responseSummary VARCHAR(500) NULL
+- confidence DECIMAL(5,4) NULL
+- createdAt DATETIME2 NOT NULL
+- checksum VARBINARY(32) NOT NULL
+```
 
-# Justificación: Documentacion
+# Justificación:
 
-# =========================
-# PAGOS, AUDITORÍA Y VALIDACIÓN DE TARJETA
-# =========================
+# Tabla central para registrar ejecuciones de IA.
 
-## PaymentType
+# Guarda proveedor, modelo, tipo de proceso, request, response, resultado y objeto donde se aplicó.
+
+# Esto permite auditar decisiones de IA y explicar qué modelo aprobó, rechazó o dejó inconclusa una proposición o evidencia.
+
+---
+
+# ==========================
+
+# SETTINGS
+
+# ==========================
+
+## settingsTypes
+```text
+settingsTypes
+- id INT IDENTITY(1,1) PRIMARY KEY
+- code VARCHAR(30) NOT NULL UNIQUE        -- INITIAL_PLAYER_POINTS, REJECT_PENALTY_PERCENTAGE, PLATFORM_EARNINGS_PERCENTAGE
+- description VARCHAR(100) NOT NULL
+- enabled BIT NOT NULL
+```
+
+# Justificacion
+# Normalizacion
+
+---
+
+## settings
+
+```text
+settings
+- id INT IDENTITY(1,1) PRIMARY KEY
+- settingKey INT NOT NULL FOREIGN KET REFERENCES settingsTypes(Id)
+- settingValue VARCHAR(255) NOT NULL
+- valueType VARCHAR(20) NOT NULL          -- INT, DECIMAL, STRING, BOOLEAN
+- description VARCHAR(200) NULL
+- enabled BIT NOT NULL
+- updatedBy INT NULL FOREIGN KEY REFERENCES users(id)
+- updatedAt DATETIME2 NOT NULL
+```
+
+# Justificación:
+
+# Se usa una tabla flexible de configuración en vez de columnas fijas.
+
+# Esto permite agregar nuevas reglas del juego sin modificar la estructura física de la tabla.
+
+# Ejemplo:
+
+# - INITIAL_PLAYER_POINTS = 100
+
+# - UNVERIFIABLE_PENALTY_PERCENTAGE = 15
+
+# - PLATFORM_EARNINGS_PERCENTAGE = 5
+
+---
+
+# ==========================
+
+# PAYMENT METHODS, ATTEMPTS AND VALIDATIONS
+
+# ==========================
+
+## paymentTypes
+
+```text
 paymentTypes
-- id (PK)
-- code varchar(20) (UNIQUE)              -- CARD, SINPE, PAYPAL, BANK_TRANSFER
-- enabled BOOLEAN
+- id INT IDENTITY(1,1) PRIMARY KEY
+- code VARCHAR(30) NOT NULL UNIQUE        -- CARD, SINPE, PAYPAL, BANK_TRANSFER, INTERNAL_BALANCE
+- description VARCHAR(100) NOT NULL
+- enabled BIT NOT NULL
+```
 
 # Justificación:
-# Esta tabla clasifica el tipo general de pago que el usuario intenta realizar. 
-# Es necesaria porque Gahel permite operaciones con dinero real, como compras de puntos, apuestas con dinero, retiros o pagos de recompensas. 
-# También permite diferenciar si el pago se hizo con tarjeta, SINPE, PayPal u otro medio.
 
-## OperationType
-operationTypes
-- id (PK)
-- code varchar(30) (UNIQUE)              -- POINTS_PURCHASE, MONEY_DEPOSIT, MONEY_WITHDRAWAL, PREDICTION_BET, REWARD_PAYMENT
-- description varchar(100)
+# Clasifica el tipo general de pago.
 
-# Justificación:
-# Esta tabla indica el propósito de la operación económica. 
-# No es lo mismo pagar para comprar puntos, depositar dinero, retirar ganancias o apostar en una predicción.
-# Por eso esta tabla permite clasificar para qué se está usando el pago.
+# No significa que Gathel guarde tarjetas, solo que puede procesar pagos mediante proveedores externos.
 
+---
 
-## PaymentStatus
-paymentStatuses
-- id (PK)
-- code varchar(30) (UNIQUE)              -- PENDING, APPROVED, REJECTED, ERROR, INSUFFICIENT_FUNDS, CANCELLED
-- description varchar(100)
+## paymentProviders
+
+```text
+paymentProviders
+- id INT IDENTITY(1,1) PRIMARY KEY
+- code VARCHAR(40) NOT NULL UNIQUE        -- PAYPAL_API, SINPE_API, CARD_PROCESSOR, INTERNAL_ENGINE
+- name VARCHAR(80) NOT NULL
+- baseUrl VARCHAR(256) NULL
+- enabled BIT NOT NULL
+- createdAt DATETIME2 NOT NULL
+- updatedAt DATETIME2 NULL
+```
 
 # Justificación:
-# Esta tabla normaliza los posibles estados de un intento de pago.
-# Normalizacion.
-# También facilita consultas y reportes sobre pagos aprobados, fallidos o pendientes. Y registro si sucede algun fraude o bot.
 
+# Define el proveedor externo o interno que procesa el pago.
 
-## paymentSourceAPI
-paymentSourceAPI
-- id (PK)
-- code varchar(30) (UNIQUE)              -- CARD_PROCESSOR, SINPE_API, PAYPAL_API
-- description varchar(100)
+# Permite diferenciar entre PayPal, SINPE, procesador de tarjeta o motor interno.
 
-# Justificación:
-# Normalizacion de los posibles APIS para metodos de pago.
+---
 
+## paymentMethods
 
-## PaymentMethod
+```text
 paymentMethods
-- id (PK)
-- paymentTypeId (FK -> paymentTypes.id) 
-- source varchar(30)                     
-- apiUrl varchar(256)
-- configurationJson NVARCHAR(MAX)        -- Configuración del proveedor en JSON
-- enabled BOOLEAN
-- postTime TIMESTAMP
-- userId (FK -> users.id)
-- checksum VARBINARY(32)
-- countryId (FK -> country.id)
+- id INT IDENTITY(1,1) PRIMARY KEY
+- paymentTypeId INT NOT NULL FOREIGN KEY REFERENCES paymentTypes(id)
+- paymentProviderId INT NOT NULL FOREIGN KEY REFERENCES paymentProviders(id)
+- countryId INT NULL FOREIGN KEY REFERENCES countries(id)
+- name VARCHAR(80) NOT NULL
+- configurationJson NVARCHAR(MAX) NULL
+- enabled BIT NOT NULL
+- createdAt DATETIME2 NOT NULL
+- updatedAt DATETIME2 NULL
+- checksum VARBINARY(32) NOT NULL
+```
 
 # Justificación:
-# Esta tabla define los métodos de pago habilitados en Gathel.
-# Por ejemplo, si el pago es con tarjeta, esta tabla puede indicar si se usa VISA, Mastercard o un procesador externo.
-# El campo configurationJson permite guardar configuración flexible del proveedor, como llaves públicas, ambiente sandbox, nombre del comercio, moneda por defecto o reglas de validación.
-# No se deben guardar datos sensibles completos de la tarjeta aquí.
 
-## paymentCardType
-- id (PK)
-- code varchar(30) (UNIQUE)              -- VISA, MASTERCARD, AMEX
-- description varchar(100)
+# Define los métodos de pago habilitados en Gathel.
 
-## PaymentCards
-paymentCards
-- id (PK)
-- userId (FK -> users.id)
-- cardHolderName varchar(80)
-- paymentCardTypeId (FK -> paymentCardType.id)
-- lastFourDigits char(4)
-- expirationMonth tinyint
-- expirationYear smallint
-- tokenizedCard VARBINARY(MAX)           -- Token cifrado o referencia segura del proveedor
-- billingCountryId (FK -> countries.id)
-- enabled BOOLEAN
-- createdAt DATETIME2
-- updatedAt DATETIME2
-- checksum VARBINARY(32)
+# Aquí se guarda configuración general del método, no información de tarjetas ni datos sensibles del usuario.
+
+# Ejemplo: PayPal Costa Rica, SINPE Costa Rica, procesador de tarjetas sandbox.
+
+---
+
+## operationTypes
+
+```text
+operationTypes
+- id INT IDENTITY(1,1) PRIMARY KEY
+- code VARCHAR(40) NOT NULL UNIQUE        -- POINTS_PURCHASE, MONEY_DEPOSIT, MONEY_WITHDRAWAL, PREDICTION_BET, REWARD_PAYMENT, COMMISSION_PAYMENT, PENALTY
+- description VARCHAR(150) NOT NULL
+- enabled BIT NOT NULL
+```
 
 # Justificación:
-# Esta tabla registra tarjetas asociadas a un usuario, pero sin guardar el número completo de tarjeta ni el CVV.
-# Se almacena únicamente información segura como últimos cuatro dígitos, marca, vencimiento y token cifrado.
-# Esto permite que Gathel pueda usar tarjetas guardadas para pagos futuros sin almacenar datos sensibles completos.
 
+# Indica el propósito económico de la operación.
 
-## PaymentCardsPerUser
-paymentCardsPerUser
-- id(PK)
-- userId (FK -> users.id)
-- paymentCardId (FK -> paymentCards.id)
+# No es lo mismo comprar puntos, retirar dinero, apostar, pagar recompensa o aplicar una penalización.
+
+---
+
+## paymentStatuses
+
+```text
+paymentStatuses
+- id INT IDENTITY(1,1) PRIMARY KEY
+- code VARCHAR(30) NOT NULL UNIQUE        -- PENDING, APPROVED, REJECTED, ERROR, CANCELLED, INSUFFICIENT_FUNDS
+- description VARCHAR(100) NOT NULL
+- enabled BIT NOT NULL
+```
 
 # Justificación:
-# Un usuario puede tener multiples tarjetas
+
+# Normaliza los posibles estados de un intento de pago.
+
+---
 
 ## paymentAttempts
+
+```text
 paymentAttempts
-- id (pk)
-- paymentMethodId INT (FK -> paymentMethods.id)
-- paymentCardId BIGINT (FK -> paymentCards.id, NULL)
-- auditId BIGINT (FK -> audits.id)
-- paymentTypeId INT (FK -> paymentTypes.id)
-- operationTypeId INT (FK -> operationTypes.id)
-- paymentStatusId INT (FK -> paymentStatuses.id)
-- userId INT (FK -> users.id)
-- sourceWalletId BIGINT (FK -> wallets.id, NULL)
-- destinationWalletId BIGINT (FK -> wallets.id, NULL)
-- sourceCountryId INT (FK -> countries.id, NULL)
-- destinationCountryId INT (FK -> countries.id, NULL)
-- currencyId INT (FK -> currencies.id)
-- amount DECIMAL(18,2)
-- apiUrl varchar(256) NULL
+- id BIGINT IDENTITY(1,1) PRIMARY KEY
+- paymentMethodId INT NOT NULL FOREIGN KEY REFERENCES paymentMethods(id)
+- operationTypeId INT NOT NULL FOREIGN KEY REFERENCES operationTypes(id)
+- paymentStatusId INT NOT NULL FOREIGN KEY REFERENCES paymentStatuses(id)
+- userId INT NOT NULL FOREIGN KEY REFERENCES users(id)
+- currencyId INT NOT NULL FOREIGN KEY REFERENCES currencies(id)
+- amount DECIMAL(18,2) NOT NULL
+- referenceObjectType VARCHAR(50) NULL    -- PROPOSITION, PREDICTION, WALLET, WITHDRAWAL, PURCHASE, REWARD
+- referenceObjectId BIGINT NULL
+- providerReference VARCHAR(120) NULL
+- transactionReference VARCHAR(120) NULL
 - requestJson NVARCHAR(MAX) NULL
 - responseJson NVARCHAR(MAX) NULL
-- transactionReference varchar(100) NULL
-- referenceObjectType varchar(50) NULL    -- PROPOSITION, PREDICTION, WALLET, WITHDRAWAL, PURCHASE
-- referenceObjectId BIGINT NULL
-- sourceObjectId BIGINT NULL
-- checksum VARBINARY(32)
-- computer VARBINARY(32) NULL
-- createdAt DATETIME2
-- postTime DATETIME2
-- internal BOOLEAN
+- resultMessage VARCHAR(255) NULL
+- errorCode VARCHAR(60) NULL
+- createdAt DATETIME2 NOT NULL
+- completedAt DATETIME2 NULL
+- checksum VARBINARY(32) NOT NULL
+```
 
-# Justificacion: Validacion que si es interna del pais o no, etc
+# Justificación:
 
-# =========================
-# Wallet
-# =========================
+# Esta tabla representa únicamente el intento de procesar un pago.
+
+# No debe mezclar datos propios de `paymentMethods`.
+
+# No debe asumir que siempre hay tarjeta.
+
+# No debe asumir que siempre hay billetera origen o destino.
+
+# Si el pago es aprobado, entonces se crea una o varias transacciones.
+
+# Si el pago falla, el intento queda registrado, pero no modifica balances.
+
+---
+
+## paymentValidationTypes
+
+```text
+paymentValidationTypes
+- id INT IDENTITY(1,1) PRIMARY KEY
+- code VARCHAR(40) NOT NULL UNIQUE        -- METHOD_CHECK, COUNTRY_CHECK, FUNDS_CHECK, PROVIDER_RESPONSE, FRAUD_CHECK
+- description VARCHAR(150) NOT NULL
+- enabled BIT NOT NULL
+```
+
+# Justificación:
+
+# Clasifica los pasos de validación realizados sobre un intento de pago.
+
+---
+
+## paymentValidationStatuses
+
+```text
+paymentValidationStatuses
+- id INT IDENTITY(1,1) PRIMARY KEY
+- code VARCHAR(30) NOT NULL UNIQUE        -- PENDING, APPROVED, REJECTED, ERROR
+- description VARCHAR(100) NOT NULL
+- enabled BIT NOT NULL
+```
+
+# Justificación:
+
+# Normaliza los estados de cada validación individual de pago.
+
+---
+
+## paymentAttemptValidations
+
+```text
+paymentAttemptValidations
+- id BIGINT IDENTITY(1,1) PRIMARY KEY
+- paymentAttemptId BIGINT NOT NULL FOREIGN KEY REFERENCES paymentAttempts(id)
+- paymentValidationTypeId INT NOT NULL FOREIGN KEY REFERENCES paymentValidationTypes(id)
+- paymentValidationStatusId INT NOT NULL FOREIGN KEY REFERENCES paymentValidationStatuses(id)
+- validationOrder INT NOT NULL
+- validationMessage VARCHAR(255) NULL
+- requestJson NVARCHAR(MAX) NULL
+- responseJson NVARCHAR(MAX) NULL
+- externalReference VARCHAR(120) NULL
+- createdAt DATETIME2 NOT NULL
+- checksum VARBINARY(32) NOT NULL
+```
+
+# Justificación:
+
+# Reemplaza la tabla `audits`.
+
+# Esta tabla es más específica porque registra las validaciones realizadas sobre un intento de pago.
+
+# Permite demostrar paso a paso por qué un pago fue aprobado, rechazado o falló.
+
+---
+
+# ==========================
+
+# WALLETS AND TRANSACTIONS
+
+# ==========================
 
 ## wallets
+
+```text
 wallets
-- id BIGINT IDENTITY(1,1) (PK)
-- userId INT (FK -> users.id)
-- currencyId INT (FK -> currencies.id)
-- pointsBalance DECIMAL(18,2)
-- moneyBalance DECIMAL(18,2)
-- enabled BOOLEAN
-- createdAt DATETIME2
+- id BIGINT IDENTITY(1,1) PRIMARY KEY
+- userId INT NOT NULL FOREIGN KEY REFERENCES users(id)
+- currencyId INT NOT NULL FOREIGN KEY REFERENCES currencies(id)
+- balance DECIMAL(18,2) NOT NULL
+- enabled BIT NOT NULL
+- createdAt DATETIME2 NOT NULL
 - updatedAt DATETIME2 NULL
-- checksum VARBINARY(32)
+- checksum VARBINARY(32) NOT NULL
 
-# =========================
-# VALIDACIONES DE PAGOS
-# =========================
-
-## PaymentValidationTypes
-paymentValidationTypes
-- id (PK)
-- code varchar(30) (UNIQUE)       -- CARD_VALIDATION, SINPE_VALIDATION, COUNTRY_VALIDATION, FUNDS_VALIDATION
-- description varchar(100)
-- enabled BOOLEAN
+UNIQUE(userId, currencyId)
+```
 
 # Justificación:
-# Esta tabla clasifica los tipos de validación que se realizan sobre un intento de pago.
-# Es necesaria porque no todos los métodos de pago se validan igual.
-# Una tarjeta requiere validar token, fondos y respuesta del proveedor.
-# SINPE requiere vBusinealidar que sea una operación interna o del mismo país.
 
-## paymentValidationStatus
-paymentValidationStatus
-- id (PK)
-- code varchar(30) (UNIQUE)       -- APPROVED, REJECTED, ERROR, PENDING
-- description varchar(100)
-- enabled BOOLEAN
+# Un usuario puede tener una billetera por moneda.
 
-## PaymentValidations
-paymentValidations
-- id (PK)
-- paymentAttemptId (FK -> paymentAttempts.id)
-- paymentValidationTypeId (FK -> paymentValidationTypes.id)
-- paymentValidationStatusId (FK -> paymentValidationStatusId)              
-- validationMessage varchar(255)
-- requestJson NVARCHAR(MAX)
-- responseJson NVARCHAR(MAX)
-- createdAt DATE
-- checksum VARBINARY(32)
+# Los puntos son una moneda virtual, por lo que no se necesita separar `pointsBalance` y `moneyBalance`.
 
-# Justificación:
-# Esta tabla guarda cada validación realizada sobre un intento de pago.
-# Permite demostrar paso por paso por qué un pago fue aceptado o rechazado.
-# Por ejemplo, en SINPE puede guardar la validación de país, moneda, usuario origen, usuario destino y resultado.
+# Ejemplo:
+
+# - Usuario 1, PTS, balance 100
+
+# - Usuario 1, USD, balance 25
+
+# - Usuario 1, CRC, balance 5000
+
+---
 
 ## transactionTypes
-transactionTypes
-- id  (PK)
-- code varchar(30) (UNIQUE)              -- POINTS_IN, POINTS_OUT, MONEY_IN, MONEY_OUT, BET, REWARD, COMMISSION, PENALTY
-- description varchar(100)
-- createdAt DATETIME2
-- createdBy INT (FK -> users.id)
-- enabled BOOLEAN
 
-# Por normalizacion
+```text
+transactionTypes
+- id INT IDENTITY(1,1) PRIMARY KEY
+- code VARCHAR(40) NOT NULL UNIQUE        -- BALANCE_IN, BALANCE_OUT, BET, REWARD, COMMISSION, PENALTY, REDEMPTION
+- description VARCHAR(150) NOT NULL
+- createdAt DATETIME2 NOT NULL
+- createdBy INT NULL FOREIGN KEY REFERENCES users(id)
+- enabled BIT NOT NULL
+```
+
+# Justificación:
+
+# Clasifica los movimientos de saldo.
+
+# Se usa tanto para puntos como para dinero real.
+
+---
 
 ## transactions
+
+```text
 transactions
-- id (PK)
-- typeId INT (FK -> transactionTypes.id)
-- walletId BIGINT (FK -> wallets.id)
-- paymentAttemptId BIGINT (FK -> paymentAttempts.id, NULL)
-- date DATETIME2
-- description varchar(100)
-- amount DECIMAL(18,2)
-- currencyId INT (FK -> currencies.id)
-- exchangeRateId INT (FK -> exchangeRates.id, NULL)
-- referenceType varchar(30) NULL          -- PREDICTION, PROPOSITION, PAYMENT, REWARD, PENALTY
+- id BIGINT IDENTITY(1,1) PRIMARY KEY
+- transactionTypeId INT NOT NULL FOREIGN KEY REFERENCES transactionTypes(id)
+- walletId BIGINT NOT NULL FOREIGN KEY REFERENCES wallets(id)
+- paymentAttemptId BIGINT NULL FOREIGN KEY REFERENCES paymentAttempts(id)
+- currencyId INT NOT NULL FOREIGN KEY REFERENCES currencies(id)
+- exchangeRateId INT NULL FOREIGN KEY REFERENCES exchangeRates(id)
+- amount DECIMAL(18,2) NOT NULL
+- balanceBefore DECIMAL(18,2) NOT NULL
+- balanceAfter DECIMAL(18,2) NOT NULL
+- referenceType VARCHAR(40) NULL          -- PREDICTION, PROPOSITION, PAYMENT, REWARD, PENALTY, REDEMPTION
 - referenceId BIGINT NULL
-- externalReference varchar(100) NULL
-- balanceAfterPoints DECIMAL(18,2)
-- balanceAfterMoney DECIMAL(18,2)
-- balanceBeforePoints DECIMAL(18,2)
-- balanceBeforeMoney DECIMAL(18,2)
-- createdBy (FK -> users.id)
-- createdAt DATETIME
-- checksum VARBINARY(32)
+- externalReference VARCHAR(120) NULL
+- description VARCHAR(150) NULL
+- createdBy INT NULL FOREIGN KEY REFERENCES users(id)
+- createdAt DATETIME2 NOT NULL
+- checksum VARBINARY(32) NOT NULL
+```
 
-## Business
-- id PK
-- businessName varchar(40)
-- countryId (FK -> countries.id)
-- contactEmail varchar(255)
-- contactPhone varchar(20)
-- enabled BOOLEAN
-- createdBy (FK -> users.id)
-- createdAt DATETIME
-- updatedAt DATETIME
-- updatedBy (FK -> users.id)
-- checksum VARBINARY(32)
+# Justificación:
 
+# Registra movimientos reales sobre una billetera.
 
-## quantityType
-- id (PK)
-- code varchar(20) (UNIQUE) -- bottles, pair
+# Solo debe generarse cuando hay un cambio de balance.
 
-## unitMeasurement
-- id (PK)
-- code varchar(20) (UNIQUE) -- cm, dl, om
+# Si proviene de un pago externo exitoso, se relaciona con `paymentAttempts`.
 
-# Catalogo de caracteristicas variables que puede tener un producto.
-# Ejemplo: color, material, tamaño, capacidad, RAM, CPU
+---
+
+# ==========================
+
+# BUSINESS AND REDEEMABLE PRODUCTS
+
+# ==========================
+
+## businesses
+
+```text
+businesses
+- id BIGINT IDENTITY(1,1) PRIMARY KEY
+- businessName VARCHAR(80) NOT NULL
+- countryId INT NOT NULL FOREIGN KEY REFERENCES countries(id)
+- addressId BIGINT NULL FOREIGN KEY REFERENCES addresses(id)
+- contactEmail VARCHAR(255) NULL
+- contactPhone VARCHAR(20) NULL
+- enabled BIT NOT NULL
+- createdBy INT NULL FOREIGN KEY REFERENCES users(id)
+- createdAt DATETIME2 NOT NULL
+- updatedAt DATETIME2 NULL
+- updatedBy INT NULL FOREIGN KEY REFERENCES users(id)
+- checksum VARBINARY(32) NOT NULL
+```
+
+# Justificación:
+
+# Representa empresas externas que pueden aceptar puntos de Gathel o participar en canjes.
+
+---
+
+## quantityTypes
+
+```text
+quantityTypes
+- id INT IDENTITY(1,1) PRIMARY KEY
+- code VARCHAR(20) NOT NULL UNIQUE        -- UNIT, BOTTLE, PAIR, PACKAGE
+- description VARCHAR(100) NULL
+- enabled BIT NOT NULL
+```
+
+# Justificación:
+
+# Normaliza el tipo de cantidad de un producto canjeable.
+
+---
+
+## unitMeasurements
+
+```text
+unitMeasurements
+- id INT IDENTITY(1,1) PRIMARY KEY
+- code VARCHAR(20) NOT NULL UNIQUE        -- CM, ML, KG, UNIT
+- description VARCHAR(100) NULL
+- enabled BIT NOT NULL
+```
+
+# Justificación:
+
+# Normaliza unidades de medida.
+
+---
 
 ## productCharacteristics
-- id (PK)
-- name varchar(60)
 
+```text
+productCharacteristics
+- id INT IDENTITY(1,1) PRIMARY KEY
+- name VARCHAR(60) NOT NULL
+- enabled BIT NOT NULL
+```
 
-## RedeemableProducts
-- id PK
-- businessId (FK -> business.id)
-- productName varchar(100)
-- description varchar(255)
-- stock integer
-- unitMeasurementId (FK -> unitMeasurement.id)
-- quantityTypeId (FK -> quanityType.id)
-- checksum VARBINARY
-- createdAt DATE
-- createdBy (FK -> users.id)
-- enabled BOOLEAN
-- updatedAt DATE
-- updatedBy (FK -> users.id)
-- currencyId (FK -> currencies.id)
-- amount float
+# Justificación:
 
-## RedemptionStatus
-- id PK
-- status varchar(30) UNIQUE
+# Catálogo de características variables que puede tener un producto.
 
-## ProductRedemption
-- id PK
-- userId (FK -> users.id)
-- redeemableProductsId (FK -> redeemableProducts.id)
-- currencyId (FK -> currrencies.id)
-- amountSpent NUMERIC
-- redeemedAt DATETIME
-- checksum VARBINARY
-- transactionId (FK -> transactions.id)
-- redemptionStatusId (FK -> redemptionStatus.id)
+# Ejemplo: color, material, tamaño, capacidad, RAM, CPU.
 
-# Relacion entre el producto y sus caracteristicas variables.
-# Ejemplo: Laptop -> RAM = 16GB
+---
+
+## redeemableProducts
+
+```text
+redeemableProducts
+- id BIGINT IDENTITY(1,1) PRIMARY KEY
+- businessId BIGINT NOT NULL FOREIGN KEY REFERENCES businesses(id)
+- productName VARCHAR(100) NOT NULL
+- description VARCHAR(255) NULL
+- stock INT NOT NULL
+- unitMeasurementId INT NULL FOREIGN KEY REFERENCES unitMeasurements(id)
+- quantityTypeId INT NULL FOREIGN KEY REFERENCES quantityTypes(id)
+- currencyId INT NOT NULL FOREIGN KEY REFERENCES currencies(id)
+- amount DECIMAL(18,2) NOT NULL
+- checksum VARBINARY(32) NOT NULL
+- createdAt DATETIME2 NOT NULL
+- createdBy INT NULL FOREIGN KEY REFERENCES users(id)
+- enabled BIT NOT NULL
+- updatedAt DATETIME2 NULL
+- updatedBy INT NULL FOREIGN KEY REFERENCES users(id)
+```
+
+# Justificación:
+
+# Productos que pueden ser canjeados con dinero o puntos de Gathel.
+
+# El precio se maneja con `currencyId`, por lo que puede cobrarse en PTS, USD, CRC, etc.
+
+---
+
+## redemptionStatuses
+
+```text
+redemptionStatuses
+- id INT IDENTITY(1,1) PRIMARY KEY
+- status VARCHAR(30) NOT NULL UNIQUE      -- PENDING, APPROVED, REJECTED, DELIVERED, CANCELLED
+- description VARCHAR(100) NULL
+- enabled BIT NOT NULL
+```
+
+# Justificación:
+
+# Estados posibles de un canje.
+
+---
+
+## productRedemptions
+
+```text
+productRedemptions
+- id BIGINT IDENTITY(1,1) PRIMARY KEY
+- userId INT NOT NULL FOREIGN KEY REFERENCES users(id)
+- redeemableProductId BIGINT NOT NULL FOREIGN KEY REFERENCES redeemableProducts(id)
+- currencyId INT NOT NULL FOREIGN KEY REFERENCES currencies(id)
+- amountSpent DECIMAL(18,2) NOT NULL
+- redeemedAt DATETIME2 NOT NULL
+- checksum VARBINARY(32) NOT NULL
+- transactionId BIGINT NULL FOREIGN KEY REFERENCES transactions(id)
+- redemptionStatusId INT NOT NULL FOREIGN KEY REFERENCES redemptionStatuses(id)
+```
+
+# Justificación:
+
+# Registra el canje de productos por parte de los usuarios.
+
+# Si el canje afecta balance, debe relacionarse con una transacción.
+
+---
 
 ## productCharacteristicPerProduct
-- id (PK)
-- redeemableProductId (FK -> redeemableProduct.id)
-- productCharacteristicId (FK -> productCharacteristics.id)
-- value varchar(100)
 
-# =========================
-# Proposiciones, predicciones y eventos
-# =========================
+```text
+productCharacteristicPerProduct
+- id BIGINT IDENTITY(1,1) PRIMARY KEY
+- redeemableProductId BIGINT NOT NULL FOREIGN KEY REFERENCES redeemableProducts(id)
+- productCharacteristicId INT NOT NULL FOREIGN KEY REFERENCES productCharacteristics(id)
+- value VARCHAR(100) NOT NULL
 
-## EventStatus                        -- Si está en revisión, ejecutándose, en votación...
-- id PK
-- status varchar(30) UNIQUE
+UNIQUE(redeemableProductId, productCharacteristicId)
+```
 
-## Events
-- id PK
-- eventName varchar(50)
-- creatorUser (FK -> users.id)
-- eventStatus (FK -> eventStatus.id)
-- description varchar(200)
-- createdAt DATE
+# Justificación:
 
-## PropositionStatus
-- id PK
-- status varchar(30) UNIQUE
+# Relaciona productos canjeables con características variables.
 
-## Propositions
-- id PK
-- title varchar(100)
-- description varchar(200)
-- numberOfVotes integer
-- proposedBy (FK -> user.id)
-- proposedTo (FK -> user.id)
-- propositionStatusid (FK -> propositionStatus.id)
-- currencyId (FK -> currency.id)
-- createdAt DATE
-- votingStarts TIMESTAMP
-- votingClosesAt TIMESTAMP
-- acceptedAt DATE
-- rejectedAt DATE
-- enabled BOOLEAN
-- checksum VARBINARY
+# Ejemplo:
 
-## PropositionsPerEvent
-- id PK
-- eventId (FK -> events.id)
-- propositionId (FK -> propositions.id)
+# Laptop -> RAM = 16GB
 
-## PropositionVotes
-- id PK
-- userId (FK -> users.id)
-- propositionsId (FK -> propositions.id)
-- checksum VARBINARY
-- votedAt TIMESTAMP
+# Botella -> Capacidad = 500ml
 
-## ResultType
-- id PK
-- code varchar(30) UNIQUE
+---
 
-## PropositionResult
-- id PK
-- resultTypeId (FK -> resultType.id)
-- aiProcessId (FK -> aiProcess.id)
-- propositionId (FK -> propositions.id)
-- resultAt DATE
-- checksum VARBINARY
+# ==========================
 
-## PredictionType
-- id PK
-- code varchar(40) UNIQUE
+# PROPOSITIONS, PREDICTIONS AND RESULTS
 
-## Predictions                     -- no hay predictionsPerUser porque cada usuario solo tiene una predicción por proposición
-- id PK
-- predictionTypesId (FK -> predictionTypes.id)
-- predictedBy (FK -> users.id)
-- propositionId (FK -> proposition.id)
-- currencyId (FK -> currencies.id)
-- amount float
-- winnerAmount float                     -- cuánto ganó el que hizo al predicción
-- createdAt DATE
-- enabled BOOLEAN
-- winner BOOLEAN
-- checksum VARBINARY
+# ==========================
+
+## propositionStatuses
+
+```text
+propositionStatuses
+- id INT IDENTITY(1,1) PRIMARY KEY
+- code VARCHAR(40) NOT NULL UNIQUE        -- PROPOSED, UNDER_AI_REVIEW, VOTING, SELECTED, ACCEPTED, REJECTED, ACTIVE, COMPLETED, CANCELLED, UNVERIFIABLE
+- description VARCHAR(150) NOT NULL
+- enabled BIT NOT NULL
+```
+
+# Justificación:
+
+# Normaliza el ciclo de vida de una proposición.
+
+# La proposición es la entidad central del flujo de Gathel.
+
+---
+
+## propositions
+
+```text
+propositions
+- id BIGINT IDENTITY(1,1) PRIMARY KEY
+- title VARCHAR(120) NOT NULL
+- description VARCHAR(500) NOT NULL
+- proposedBy INT NOT NULL FOREIGN KEY REFERENCES users(id)
+- proposedTo INT NOT NULL FOREIGN KEY REFERENCES users(id)
+- propositionStatusId INT NOT NULL FOREIGN KEY REFERENCES propositionStatuses(id)
+- selectedVoteId BIGINT NULL
+- votingStartsAt DATETIME2 NULL
+- votingClosesAt DATETIME2 NULL
+- acceptedAt DATETIME2 NULL
+- rejectedAt DATETIME2 NULL
+- challengeStartsAt DATETIME2 NULL
+- challengeEndsAt DATETIME2 NULL
+- enabled BIT NOT NULL
+- createdAt DATETIME2 NOT NULL
+- updatedAt DATETIME2 NULL
+- checksum VARBINARY(32) NOT NULL
+```
+
+# Justificación:
+
+# Representa una proposición hecha por un usuario hacia sí mismo o hacia otro jugador.
+
+# Se elimina la dependencia con `Events`, porque la proposición ya contiene el flujo de votación, aceptación, ejecución y validación.
+
+---
+
+## propositionStatusHistory
+
+```text
+propositionStatusHistory
+- id BIGINT IDENTITY(1,1) PRIMARY KEY
+- propositionId BIGINT NOT NULL FOREIGN KEY REFERENCES propositions(id)
+- oldStatusId INT NULL FOREIGN KEY REFERENCES propositionStatuses(id)
+- newStatusId INT NOT NULL FOREIGN KEY REFERENCES propositionStatuses(id)
+- changedBy INT NULL FOREIGN KEY REFERENCES users(id)
+- changeReason VARCHAR(255) NULL
+- changedAt DATETIME2 NOT NULL
+- checksum VARBINARY(32) NOT NULL
+```
+
+# Justificación:
+
+# Registra el historial de cambios de estado de una proposición.
+
+# Permite explicar cómo una proposición pasó por revisión de IA, votación, aceptación, ejecución, cierre o anulación.
+
+---
+
+## propositionVotes
+
+```text
+propositionVotes
+- id BIGINT IDENTITY(1,1) PRIMARY KEY
+- userId INT NOT NULL FOREIGN KEY REFERENCES users(id)
+- propositionId BIGINT NOT NULL FOREIGN KEY REFERENCES propositions(id)
+- votedAt DATETIME2 NOT NULL
+- checksum VARBINARY(32) NOT NULL
+
+UNIQUE(userId, propositionId)
+```
+
+# Justificación:
+
+# Registra los votos de los usuarios sobre proposiciones.
+
+# La restricción UNIQUE evita que un usuario vote más de una vez por la misma proposición.
+
+---
+
+## resultTypes
+
+```text
+resultTypes
+- id INT IDENTITY(1,1) PRIMARY KEY
+- code VARCHAR(40) NOT NULL UNIQUE        -- COMPLETED, NOT_COMPLETED, UNVERIFIABLE, CANCELLED
+- description VARCHAR(150) NOT NULL
+- enabled BIT NOT NULL
+```
+
+# Justificación:
+
+# Normaliza los posibles resultados finales de una proposición.
+
+---
+
+## propositionResults
+
+```text
+propositionResults
+- id BIGINT IDENTITY(1,1) PRIMARY KEY
+- propositionId BIGINT NOT NULL FOREIGN KEY REFERENCES propositions(id)
+- resultTypeId INT NOT NULL FOREIGN KEY REFERENCES resultTypes(id)
+- aiProcessLogId BIGINT NULL FOREIGN KEY REFERENCES aiProcessLogs(id)
+- resultAt DATETIME2 NOT NULL
+- resultDescription VARCHAR(255) NULL
+- checksum VARBINARY(32) NOT NULL
+```
+
+# Justificación:
+
+# Registra el resultado final de una proposición.
+
+# Puede vincularse al análisis de IA que validó si la proposición se cumplió o no.
+
+---
+
+## predictionTypes
+
+```text
+predictionTypes
+- id INT IDENTITY(1,1) PRIMARY KEY
+- code VARCHAR(40) NOT NULL UNIQUE        -- WILL_HAPPEN, WILL_NOT_HAPPEN
+- description VARCHAR(100) NOT NULL
+- enabled BIT NOT NULL
+```
+
+# Justificación:
+
+# Define los tipos de predicción posibles.
+
+---
+
+## predictions
+
+```text
+predictions
+- id BIGINT IDENTITY(1,1) PRIMARY KEY
+- predictionTypeId INT NOT NULL FOREIGN KEY REFERENCES predictionTypes(id)
+- predictedBy INT NOT NULL FOREIGN KEY REFERENCES users(id)
+- propositionId BIGINT NOT NULL FOREIGN KEY REFERENCES propositions(id)
+- walletId BIGINT NOT NULL FOREIGN KEY REFERENCES wallets(id)
+- betTransactionId BIGINT NULL FOREIGN KEY REFERENCES transactions(id)
+- rewardTransactionId BIGINT NULL FOREIGN KEY REFERENCES transactions(id)
+- amount DECIMAL(18,2) NOT NULL
+- winnerAmount DECIMAL(18,2) NULL
+- winner BIT NULL
+- enabled BIT NOT NULL
+- createdAt DATETIME2 NOT NULL
+- checksum VARBINARY(32) NOT NULL
+
+UNIQUE(predictedBy, propositionId)
+```
+
+# Justificación:
+
+# Cada usuario solo puede hacer una predicción por proposición.
+
+# La predicción se asocia a una billetera porque puede hacerse con puntos o dinero.
+
+# Si la predicción genera apuesta o recompensa, se relaciona con transacciones.
+
+---
+
+# ==========================
+
+# TABLAS ELIMINADAS DEL DISEÑO ANTERIOR
+
+# ==========================
+
+## Tablas eliminadas
+
+```text
+events
+eventStatus
+propositionsPerEvent
+paymentCards
+paymentCardsPerUser
+paymentCardType
+audits
+auditType
+taxes
+```
+
+# Justificación general:
+
+# `events`, `eventStatus` y `propositionsPerEvent` se eliminan porque no aportaban al flujo principal.
+
+# La proposición ya representa la unidad central del juego.
+
+#
+
+# `paymentCards`, `paymentCardsPerUser` y `paymentCardType` se eliminan porque Gathel no debe guardar tarjetas.
+
+# Guardar tarjetas implica riesgos de seguridad y estándares que están fuera del alcance del proyecto.
+
+#
+
+# `audits` y `auditType` se reemplazan por `paymentAttemptValidations`, que es más específico y depende directamente del intento de pago.
+
+#
+
+# `taxes` se elimina porque generaba confusión con `countryTaxes`.
+
+# Ahora `countryTaxes` contiene el país, tipo de impuesto, nombre, porcentaje o monto fijo y vigencia.
+
+---
+
+# ==========================
+
+# REGLAS GENERALES DEL DISEÑO
+
+# ==========================
+
+# 1. Puntos y dinero
+
+# Los puntos de Gathel son una moneda virtual llamada PTS.
+
+# Por eso no se usa `pointsBalance` y `moneyBalance`.
+
+# Todo saldo se guarda en `wallets.balance`.
+
+# 2. Pagos
+
+# Un pago primero se registra en `paymentAttempts`.
+
+# Si el intento es aprobado, se genera una transacción.
+
+# Si el intento falla, no se modifica ningún balance.
+
+# 3. Tarjetas
+
+# Gathel no almacena tarjetas.
+
+# Solo registra el proveedor, el intento de pago, request, response y resultado.
+
+# 4. IA
+
+# Toda revisión de IA debe quedar registrada en `aiProcessLogs`.
+
+# Debe saberse proveedor, modelo, tipo de proceso, request, response, resultado y objeto donde se aplicó.
+
+# 5. Redes sociales
+
+# No basta con saber que un usuario tiene Instagram o TikTok.
+
+# También se debe guardar qué publicación originó la proposición o cuál sirvió como evidencia.
+
+# 6. Proposiciones
+
+# La proposición es la entidad principal del juego.
+
+# No se necesita una tabla `Events` para el flujo base.
+
+# 7. Fechas
+
+# Se usa `DATETIME2` cuando interesa guardar fecha y hora.
+
+# Se evita usar solo `DATE` en procesos como votaciones, pagos, predicciones, publicaciones y logs.
+
+# 8. Montos
+
+# Se usa `DECIMAL` para dinero, puntos y balances.
+
+# No se usa `FLOAT` para montos financieros porque puede generar errores de precisión.
+
+# 9. Seguridad
+
+# Passwords, tokens y checksums se guardan en campos binarios.
+
+# No se guardan contraseñas, tarjetas ni tokens sensibles en texto plano.
