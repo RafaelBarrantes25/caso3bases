@@ -18,3 +18,5 @@
     * Se realizaron los cambios en el markdown dichos por el profesor, y se hizo la revision con el agente IA. 
 # v0.1.8
     * Carpeta .github con instrucciones para el agente de IA.
+# v0.1.9
+    * Se corrigieron los archivos de flyway, tomando en cuenta el nuevo markdown de la base de datos.
