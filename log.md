@@ -16,3 +16,5 @@
     * Creacion de scripts para flyway, creacion de configuracion de flyway, reorganizacion del github. 
 # v0.1.7
     * Se realizaron los cambios en el markdown dichos por el profesor, y se hizo la revision con el agente IA. 
+# v0.1.8
+    * Carpeta .github con instrucciones para el agente de IA.
