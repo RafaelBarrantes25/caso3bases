@@ -13,7 +13,7 @@ CREATE USER Gerente1 FOR LOGIN GerenteGathel;
 /*
 TRUNCATE TABLE dbo.transactions;
 DELETE FROM dbo.paymentAttempts;
-DELETE FROM dbo.audits;
+
 DELETE FROM dbo.predictions;
 DELETE FROM dbo.propositionsPerEvent;
 DELETE FROM dbo.events;
@@ -177,4 +177,104 @@ END;
 GO
 
 
+
+
+---------------------------------------------------------------------------------------------------------
+------------Inserción de eventos
+---------------------------------------------------------------------------------------------------------
+DECLARE @PropCount INT = 0;
+DECLARE @TargetProps INT = 5000;
+
+DECLARE @StatusProposed INT = (SELECT id FROM dbo.propositionStatus WHERE status = 'Proposed');
+DECLARE @CurrencyId INT = (SELECT TOP 1 id FROM dbo.currencies);
+DECLARE @PaymentTypeId INT = (SELECT id FROM dbo.paymentTypes WHERE code = 'WALLET');
+DECLARE @OpTypeId INT = (SELECT id FROM dbo.operationTypes WHERE code = 'BET_PLACE');
+DECLARE @StatusApproved INT = (SELECT id FROM dbo.paymentStatuses WHERE code = 'APPROVED');
+
+-- Tabla temporal para mapear IDs de eventos disponibles secuencialmente
+SELECT id, ROW_NUMBER() OVER (ORDER BY id) AS RowNum 
+INTO #TmpEvents 
+FROM dbo.events;
+
+DECLARE @MaxEvents INT = (SELECT COUNT(*) FROM #TmpEvents);
+
+WHILE @PropCount < @TargetProps
+BEGIN
+    SET @PropCount = @PropCount + 1;
+
+    -- Seleccionar dos jugadores distintos aleatoriamente
+    DECLARE @PlayerA INT, @PlayerB INT;
+    
+    SELECT TOP 1 @PlayerA = id FROM dbo.users ORDER BY NEWID();
+    SELECT TOP 1 @PlayerB = id FROM dbo.users WHERE id <> @PlayerA ORDER BY NEWID();
+
+    DECLARE @WalletA BIGINT = (SELECT id FROM dbo.wallets WHERE userId = @PlayerA);
+    DECLARE @WalletB BIGINT = (SELECT id FROM dbo.wallets WHERE userId = @PlayerB);
+
+    DECLARE @Amount DECIMAL(18,2) = CAST((ABS(CHECKSUM(NEWID())) % 45 + 5) AS DECIMAL(18,2)); -- Montos entre 5 y 50
+    DECLARE @CreationDate DATETIME2 = DATEADD(MINUTE, -ABS(CHECKSUM(NEWID()) % 1440), SYSUTCDATETIME());
+
+    /* A. INSERTAR PROPOSICIÓN */
+    INSERT INTO dbo.propositions (
+        title, description, numberOfVotes, proposedBy, proposedTo, 
+        propositionStatusId, currencyId, createdAt, enabled
+    )
+    VALUES (
+        'Proposición #' + CAST(@PropCount AS VARCHAR(10)),
+        'Descripción',
+        0, @PlayerA, @PlayerB, @StatusProposed, @CurrencyId, @CreationDate, 1
+    );
+
+    DECLARE @NewPropId BIGINT = SCOPE_IDENTITY();
+
+
+    -- Se toma la ID, que va subiendo de 1 en 1 y se multiplica por 5,
+    -- Max events - 60 es para que el número siempre quede en el rango de eventos
+    -- existentes
+    INSERT INTO dbo.propositionsPerEvent (eventId, propositionId)
+    SELECT id, @NewPropId
+    FROM #TmpEvents
+    WHERE RowNum BETWEEN ((@PropCount * 5) % (@MaxEvents - 60)) AND (((@PropCount * 5) % (@MaxEvents - 60)) + 49);
+
+
+    
+ 
+
+    VALUES (
+        NULL, 1, 'INITIAL_CHECK', @StatusApproved, 'Fondos de Wallet validados correctamente.', @CreationDate, @PlayerA
+    );
+
+    INSERT INTO dbo.paymentAttempts (
+        paymentMethodId, paymentCardId, paymentTypeId, operationTypeId, 
+        paymentStatusId, userId, sourceWalletId, destinationWalletId, currencyId, 
+        amount, referenceObjectType, referenceObjectId, createdAt, postTime, internal
+    )
+    VALUES (
+        1, NULL, @PaymentTypeId, @OpTypeId, @StatusApproved, 
+        @PlayerA, @WalletA, @WalletB, @CurrencyId, @Amount, 
+        'PROPOSITION', @NewPropId, @CreationDate, @CreationDate, 1
+    );
+
+    DECLARE @NewPaymentAttemptId BIGINT = SCOPE_IDENTITY();
+
+
+    -- Balance simulado pre y post
+    DECLARE @BalBefore DECIMAL(18,2) = 100.00; 
+    
+    INSERT INTO dbo.transactions (
+        typeId, walletId, paymentAttemptId, date, description, amount, 
+        currencyId, referenceType, referenceId, balanceAfterPoints, 
+        balanceAfterMoney, balanceBeforePoints, balanceBeforeMoney, createdAt
+    )
+    VALUES (
+        1, @WalletA, @NewPaymentAttemptId, @CreationDate, 
+        'Débito automático por creación de Proposición #' + CAST(@NewPropId AS VARCHAR(10)), 
+        @Amount, @CurrencyId, 'PROPOSITION', @NewPropId, 
+        @BalBefore - @Amount, 0, @BalBefore, 0, @CreationDate
+    );
+
+END;
+
+DROP TABLE #TmpEvents;
+GO
 
