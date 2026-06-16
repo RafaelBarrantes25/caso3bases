@@ -22,3 +22,5 @@
     * Se corrigieron los archivos de flyway, tomando en cuenta el nuevo markdown de la base de datos.
 # v0.2.0
     * Docker compose, V5 prueba de seeding
+# v0.2.1
+    * Script de security lab
