@@ -24,3 +24,5 @@
     * Docker compose, V5 prueba de seeding
 # v0.2.1
     * Script de security lab
+# v0.2.2
+    * pruebas de deadlocks, security lab mejorado, sp anidados y aislamiento
