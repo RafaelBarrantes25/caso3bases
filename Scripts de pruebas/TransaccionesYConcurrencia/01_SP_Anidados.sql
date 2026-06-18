@@ -12,8 +12,83 @@ CREATE TABLE dbo.LogTransacciones (
     Fecha DATETIME DEFAULT GETDATE()
 );
 GO
+----------------------------------------------------------
+-- Error en anidados sin manejo
+----------------------------------------------------------
 
 
+-- SP 3, si este falla igualmente se almacenan sus modificaciones
+CREATE PROCEDURE dbo.sp_Nivel3 @CuentaID INT, @Monto DECIMAL(10,2), @ForzarError BIT = 0
+AS
+BEGIN
+
+    BEGIN TRANSACTION SP3;
+    UPDATE dbo.Cuentas SET Saldo = Saldo - @Monto WHERE CuentaID = @CuentaID;
+    INSERT INTO dbo.LogTransacciones (Mensaje) VALUES ('SP3: débito aplicado');
+	-- falle o no, se almacenan sus cambios, podría dar problemas
+    IF @ForzarError = 1
+        THROW 50000, 'Error forzado en SP3', 1;
+
+    COMMIT TRANSACTION SP3;
+
+END;
+GO
+
+-- SP 2 crea el log para demostrar, y llama a SP 3
+CREATE PROCEDURE dbo.sp_Nivel2 @CuentaID INT, @Monto DECIMAL(10,2), @ForzarError BIT = 0
+AS
+BEGIN
+    
+    BEGIN TRANSACTION SP2;
+
+    INSERT INTO dbo.LogTransacciones (Mensaje) VALUES ('SP2: operación pendiente registrada');
+
+    EXEC dbo.sp_Nivel3 @CuentaID = @CuentaID, @Monto = @Monto, @ForzarError = @ForzarError;
+
+    COMMIT TRANSACTION SP2;
+
+END;
+GO
+
+-- SP 1, inserta el log y llama a SP 2
+CREATE PROCEDURE dbo.sp_Nivel1 @CuentaOrigen INT, @CuentaDestino INT, @Monto DECIMAL(10,2), @ForzarError BIT = 0
+AS
+BEGIN
+
+    BEGIN TRANSACTION SP1;
+
+    UPDATE dbo.Cuentas SET Saldo = Saldo + @Monto WHERE CuentaID = @CuentaDestino;
+    INSERT INTO dbo.LogTransacciones (Mensaje) VALUES ('SP1: crédito a destino pendiente');
+
+    EXEC dbo.sp_Nivel2 @CuentaID = @CuentaOrigen, @Monto = @Monto, @ForzarError = @ForzarError;
+
+    COMMIT TRANSACTION SP1;
+    PRINT 'TRANSACCIÓN COMPLETA: éxito';
+
+END;
+GO
+
+
+-- Exitoso
+SELECT * FROM dbo.Cuentas;
+EXEC dbo.sp_Nivel1 @CuentaOrigen = 1, @CuentaDestino = 2, @Monto = 100, @ForzarError = 0;
+SELECT * FROM dbo.Cuentas;          -- Los cambios persisten
+SELECT * FROM dbo.LogTransacciones; -- 3 logs, de SP 1, 2 y 3
+GO
+
+-- Error
+-- Peligroso porque podría estar guardando información errónea
+DELETE FROM dbo.LogTransacciones;
+EXEC dbo.sp_Nivel1 @CuentaOrigen = 1, @CuentaDestino = 2, @Monto = 100, @ForzarError = 1;
+SELECT * FROM dbo.Cuentas;          -- Los cambios igual persisten
+SELECT * FROM dbo.LogTransacciones; -- 3 logs
+GO
+
+
+
+----------------------------------------------------------
+-- Error en anidados con manejo
+----------------------------------------------------------
 
 
 

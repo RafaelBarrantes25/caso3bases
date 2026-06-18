@@ -26,3 +26,5 @@
     * Script de security lab
 # v0.2.2
     * pruebas de deadlocks, security lab mejorado, sp anidados y aislamiento
+# v0.2.2
+    * documentación

@@ -70,6 +70,28 @@ COMMIT TRANSACTION;
 -- ejecutar en pestaña aparte
 INSERT INTO dbo.Cuentas VALUES (4, 'Pedro', 100);
 
+---------------------------------
+-- Lost update
+---------------------------------
+UPDATE dbo.Cuentas SET Saldo = 1000 WHERE CuentaID = 1;
+
+
+SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+BEGIN TRANSACTION;
+    -- lee el valor inicial, 1000
+    SELECT Saldo FROM dbo.Cuentas WHERE CuentaID = 1;
+    WAITFOR DELAY '00:00:08';
+    -- actualiza a 1200
+    -- se ejecuta la otra de 500, y luego se ejecuta este, entonces
+	-- el de 500 se pierde
+    UPDATE dbo.Cuentas SET Saldo = 1000 + 200 WHERE CuentaID = 1;
+COMMIT TRANSACTION;
+
+
+-- se ejecuta en pestaña aparte
+-- este update se pierde, porque la transacción de arriba
+-- lo sobrescribe usando el valor viejo
+UPDATE dbo.Cuentas SET Saldo = 500 WHERE CuentaID = 1;
 
 ---------------------------------
 -- Serializable protege de todo
