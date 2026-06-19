@@ -66,7 +66,7 @@ GO
 -- 4. PERMISO DIRECTO Y PERMISO HEREDADO EN EL MISMO USUARIO
 -- ============================================================
 -- usr_norte ya tiene SELECT heredado de rol_lectura.
--- Le damos además un permiso DIRECTO adicional: UPDATE solo en columna Salario
+-- Le damos además un permiso directo adicional: UPDATE solo en columna Salario
 GRANT UPDATE ON dbo.Empleados(Salario) TO usr_norte;
 GO
 
@@ -77,11 +77,11 @@ REVERT;
 GO
 
 -- ============================================================
--- 5. SELECT BLOQUEADO + ACCESO INDIRECTO VÍA STORED PROCEDURE
+-- 5. SELECT BLOQUEADO Y ACCESO INDIRECTO POR STORED PROCEDURE
 -- ============================================================
--- usr_app NO tiene SELECT directo (solo INSERT/UPDATE vía rol_escritura)
+-- usr_app no tiene SELECT directo (solo INSERT/UPDATE por rol_escritura)
 
--- Stored Procedure con EXECUTE AS OWNER para "saltar" la restricción
+-- Stored Procedure con EXECUTE AS OWNER para saltar la restricción
 CREATE PROCEDURE dbo.sp_ConsultarEmpleados
 WITH EXECUTE AS OWNER
 AS
@@ -91,13 +91,13 @@ BEGIN
 END;
 GO
 
--- Permitir a usr_app ejecutar el SP (pero NO leer la tabla directamente)
+-- Permitir a usr_app ejecutar el SP (pero no leer la tabla directamente)
 GRANT EXECUTE ON dbo.sp_ConsultarEmpleados TO usr_app;
 GO
 
 -- PRUEBA: usr_app no puede hacer SELECT directo
 EXECUTE AS USER = 'usr_app';
-    -- Esto debe FALLAR (Permiso denegado)
+    -- Esto debe fallar (Permiso denegado)
     -- SELECT * FROM dbo.Empleados;
 
     -- Esto sí debe funcionar (acceso indirecto vía SP)
@@ -110,17 +110,17 @@ GO
 -- ============================================================
 -- usr_aud (rol_lectura): puede SELECT, NO puede INSERT/UPDATE/DELETE
 EXECUTE AS USER = 'usr_aud';
-    SELECT * FROM dbo.Empleados;                  -- OK
+    SELECT * FROM dbo.Empleados;                  -- Sirve
     -- INSERT INTO dbo.Empleados (Nombre, Puesto, Salario, NumeroTarjeta, CorreoElectronico, Region)
-    -- VALUES ('Prueba','Test',1,'0000','x@x.com','Norte');  -- DEBE FALLAR
+    -- VALUES ('Prueba','Test',1,'0000','x@x.com','Norte');  -- Falla
 REVERT;
 GO
 
--- usr_app (rol_escritura): puede INSERT/UPDATE, NO puede SELECT directo
+-- usr_app (rol_escritura): puede INSERT/UPDATE, no puede SELECT directo
 EXECUTE AS USER = 'usr_app';
     INSERT INTO dbo.Empleados (Nombre, Puesto, Salario, NumeroTarjeta, CorreoElectronico, Region)
-    VALUES ('Nuevo Empleado','Soporte',700000,'4999999999999999','nuevo@gathel.com','Norte'); -- OK
-    -- SELECT * FROM dbo.Empleados;  -- DEBE FALLAR
+    VALUES ('Nuevo Empleado','Soporte',700000,'4999999999999999','nuevo@gathel.com','Norte'); -- sirve
+    -- SELECT * FROM dbo.Empleados;  -- falla
 REVERT;
 GO
 
@@ -207,7 +207,7 @@ REVERT;
 GO
 
 -- ============================================================
--- CIFRADO DE CONTRASEÑAS CON MASTER CERTIFICATE
+-- 9: CIFRADO DE CONTRASEÑAS CON MASTER CERTIFICATE
 -- ============================================================
 
 CREATE MASTER KEY ENCRYPTION BY PASSWORD = 'M@sterKey#2026!Secure';
@@ -274,7 +274,12 @@ FROM sys.database_role_members rm
 JOIN sys.database_principals r ON rm.role_principal_id = r.principal_id
 JOIN sys.database_principals m ON rm.member_principal_id = m.principal_id;
 
--- Permisos directos vs heredados (ejecutar como cada usuario con fn_my_permissions)
+-- Permisos directos vs heredados (ejecutar como cada usuario)
+
+EXECUTE AS USER = 'usr_norte';
+SELECT * FROM fn_my_permissions(N'dbo.Empleados', 'OBJECT');
+REVERT;
+GO
 
 -- Verificar columnas enmascaradas
 SELECT name, is_masked, masking_function FROM sys.masked_columns;

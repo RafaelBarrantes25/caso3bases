@@ -28,3 +28,5 @@
     * pruebas de deadlocks, security lab mejorado, sp anidados y aislamiento
 # v0.2.2
     * documentación
+# v0.2.3
+    * documentación security lab
