@@ -9,7 +9,7 @@ services:
       - MSSQL_SA_PASSWORD=PruebaHola1!
       - MSSQL_PID=Developer
     ports:
-      - "1433:1433"
+      - "1400:1433"
     volumes:
       - sqlserver_data:/var/opt/mssql
     healthcheck:
@@ -27,10 +27,25 @@ services:
     volumes:
       - ./flyway/sql:/flyway/sql
     command: [
-      "-url=jdbc:sqlserver://sqlserver:1433;databaseName=master;encrypt=true;trustServerCertificate=true",
+      "-url=jdbc:sqlserver://sqlserver:1400;databaseName=master;encrypt=true;trustServerCertificate=true",
       "-user=sa",
       "-password=PruebaHola1!",
       "migrate"
     ]
+  
+  # Node.js backend application service
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: node_app
+    ports:
+      - "3000:3000" # Maps port 3000 on your machine to port 3000 in the container
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - .:/usr/src/app         # Live code reloading: mounts host files to container
+      - /usr/src/app/node_modules # Prevents host files from overriding container node_modules
+      
 volumes:
   sqlserver_data:

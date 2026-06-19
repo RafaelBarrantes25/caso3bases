@@ -1,0 +1,1658 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gathel</title>
+</head>
+<style>
+    :root {
+        --bg-main: #000000;
+        --bg-panel: #0f1419;
+        --bg-card: #16181c;
+        --bg-hover: #1d1f23;
+        --border: #2f3336;
+        --text-main: #e7e9ea;
+        --text-muted: #71767b;
+        --primary: #1d9bf0;
+        --primary-hover: #1a8cd8;
+        --danger: #f4212e;
+        --danger-hover: #dc1e29;
+        --success: #00ba7c;
+        --warning: #ffd400;
+        --input-bg: #000000;
+        --radius: 16px;
+        --sidebar-width: 275px;
+        --right-width: 340px;
+        --font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        * {
+        box-sizing: border-box;
+        }
+
+        body {
+        margin: 0;
+        font-family: var(--font);
+        background: var(--bg-main);
+        color: var(--text-main);
+        }
+
+        button,
+        input,
+        textarea,
+        select {
+        font-family: inherit;
+        }
+
+        button {
+        cursor: pointer;
+        }
+
+        a {
+        color: inherit;
+        text-decoration: none;
+        }
+
+        /* =========================
+        LOGIN
+        ========================= */
+
+        .login-page {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background:
+            radial-gradient(circle at top left, rgba(29, 155, 240, 0.18), transparent 32%),
+            radial-gradient(circle at bottom right, rgba(0, 186, 124, 0.10), transparent 30%),
+            #000;
+        }
+
+        .login-card {
+        width: 100%;
+        max-width: 420px;
+        background: var(--bg-panel);
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        padding: 32px;
+        box-shadow: 0 0 40px rgba(29, 155, 240, 0.08);
+        }
+
+        .login-logo {
+        font-size: 40px;
+        margin-bottom: 12px;
+        }
+
+        .login-card h1 {
+        margin: 0;
+        font-size: 32px;
+        }
+
+        .login-card p {
+        color: var(--text-muted);
+        margin-bottom: 28px;
+        }
+
+        .form-group {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 18px;
+        }
+
+        .form-group label {
+        color: var(--text-muted);
+        font-size: 14px;
+        margin-bottom: 8px;
+        }
+
+        .form-control {
+        width: 100%;
+        background: var(--input-bg);
+        color: var(--text-main);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 14px 16px;
+        outline: none;
+        font-size: 15px;
+        }
+
+        .form-control:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 1px var(--primary);
+        }
+
+        textarea.form-control {
+        resize: vertical;
+        min-height: 110px;
+        }
+
+        .login-error {
+        color: var(--danger);
+        font-size: 14px;
+        min-height: 20px;
+        margin-bottom: 12px;
+        }
+
+        /* =========================
+        BUTTONS
+        ========================= */
+
+        .btn {
+        border: none;
+        border-radius: 999px;
+        padding: 12px 18px;
+        font-weight: 700;
+        font-size: 15px;
+        transition: 0.2s ease;
+        }
+
+        .btn-primary {
+        background: var(--primary);
+        color: #fff;
+        }
+
+        .btn-primary:hover {
+        background: var(--primary-hover);
+        }
+
+        .btn-secondary {
+        background: transparent;
+        color: var(--text-main);
+        border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+        background: var(--bg-hover);
+        }
+
+        .btn-danger {
+        background: var(--danger);
+        color: #fff;
+        }
+
+        .btn-danger:hover {
+        background: var(--danger-hover);
+        }
+
+        .btn-full {
+        width: 100%;
+        }
+
+        .btn-small {
+        padding: 8px 14px;
+        font-size: 14px;
+        }
+
+        .btn-green {
+        background: var(--success);
+        color: #00130d;
+        }
+
+        .btn-green:hover {
+        filter: brightness(0.9);
+        }
+
+        /* =========================
+        APP LAYOUT
+        ========================= */
+
+        .app-shell {
+        min-height: 100vh;
+        display: grid;
+        grid-template-columns: var(--sidebar-width) minmax(0, 650px) var(--right-width);
+        justify-content: center;
+        background: var(--bg-main);
+        }
+
+        .sidebar {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        border-right: 1px solid var(--border);
+        padding: 18px 16px;
+        }
+
+        .sidebar-logo {
+        font-size: 30px;
+        font-weight: 800;
+        margin-bottom: 28px;
+        padding-left: 12px;
+        }
+
+        .sidebar-nav {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        }
+
+        .nav-btn {
+        background: transparent;
+        border: none;
+        color: var(--text-main);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        font-size: 20px;
+        padding: 14px 16px;
+        border-radius: 999px;
+        text-align: left;
+        transition: 0.2s ease;
+        }
+
+        .nav-btn:hover,
+        .nav-btn.active {
+        background: var(--bg-hover);
+        }
+
+        .nav-icon {
+        width: 24px;
+        text-align: center;
+        }
+
+        .logout-btn {
+        margin-top: auto;
+        color: var(--danger);
+        }
+
+        .sidebar-user {
+        position: absolute;
+        bottom: 16px;
+        left: 16px;
+        right: 16px;
+        border-radius: 999px;
+        padding: 12px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        transition: 0.2s ease;
+        }
+
+        .sidebar-user:hover {
+        background: var(--bg-hover);
+        }
+
+        .avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary), var(--success));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        }
+
+        .user-meta {
+        min-width: 0;
+        }
+
+        .user-meta strong,
+        .user-meta span {
+        display: block;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        }
+
+        .user-meta span {
+        color: var(--text-muted);
+        font-size: 14px;
+        }
+
+        .main-container {
+        min-height: 100vh;
+        border-right: 1px solid var(--border);
+        }
+
+        .main-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: rgba(0, 0, 0, 0.82);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--border);
+        padding: 16px 20px;
+        }
+
+        .main-header h2 {
+        margin: 0;
+        font-size: 22px;
+        }
+
+        .main-content {
+        min-height: calc(100vh - 65px);
+        }
+
+        .right-panel {
+        padding: 18px;
+        }
+
+        .info-card {
+        background: var(--bg-panel);
+        border-radius: var(--radius);
+        padding: 18px;
+        border: 1px solid var(--border);
+        margin-bottom: 18px;
+        }
+
+        .info-card h3 {
+        margin-top: 0;
+        }
+
+        .info-card p {
+        color: var(--text-muted);
+        line-height: 1.5;
+        }
+
+        /* =========================
+        DASHBOARD
+        ========================= */
+
+        .dashboard {
+        padding: 20px;
+        }
+
+        .dashboard-hero {
+        background: linear-gradient(135deg, rgba(29, 155, 240, 0.18), rgba(0, 186, 124, 0.12));
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        padding: 24px;
+        margin-bottom: 20px;
+        }
+
+        .dashboard-hero h1 {
+        margin: 0 0 8px;
+        }
+
+        .dashboard-hero p {
+        color: var(--text-muted);
+        margin: 0 0 20px;
+        }
+
+        .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+        margin-bottom: 20px;
+        }
+
+        .stat-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 18px;
+        }
+
+        .stat-label {
+        color: var(--text-muted);
+        font-size: 14px;
+        margin-bottom: 8px;
+        }
+
+        .stat-value {
+        font-size: 28px;
+        font-weight: 800;
+        }
+
+        .activity-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        }
+
+        .activity-item {
+        background: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 14px;
+        color: var(--text-muted);
+        }
+
+        .activity-item strong {
+        color: var(--text-main);
+        }
+
+        /* =========================
+        FORM VIEW
+        ========================= */
+
+        .form-view {
+        padding: 20px;
+        }
+
+        .form-card {
+        background: var(--bg-main);
+        border-bottom: 1px solid var(--border);
+        padding: 20px;
+        }
+
+        .form-card h3 {
+        margin-top: 0;
+        font-size: 22px;
+        }
+
+        .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        }
+
+        .radio-group {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 18px;
+        }
+
+        .radio-option {
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 10px 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--text-main);
+        }
+
+        .radio-option:hover {
+        background: var(--bg-hover);
+        }
+
+        .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        margin-top: 18px;
+        }
+
+        /* =========================
+        POSTS / PROPOSITIONS
+        ========================= */
+
+        .feed {
+        display: flex;
+        flex-direction: column;
+        }
+
+        .post-card {
+        border-bottom: 1px solid var(--border);
+        padding: 18px 20px;
+        display: flex;
+        gap: 12px;
+        transition: 0.2s ease;
+        }
+
+        .post-card:hover {
+        background: rgba(255, 255, 255, 0.025);
+        }
+
+        .post-avatar {
+        min-width: 46px;
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary), #7856ff);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        }
+
+        .post-body {
+        width: 100%;
+        min-width: 0;
+        }
+
+        .post-header {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-bottom: 4px;
+        }
+
+        .post-header strong {
+        font-size: 15px;
+        }
+
+        .post-header span {
+        color: var(--text-muted);
+        font-size: 14px;
+        }
+
+        .post-title {
+        font-size: 19px;
+        font-weight: 800;
+        margin: 8px 0;
+        }
+
+        .post-description {
+        line-height: 1.5;
+        margin: 0 0 14px;
+        }
+
+        .post-meta {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 12px;
+        color: var(--text-muted);
+        display: grid;
+        gap: 6px;
+        font-size: 14px;
+        margin-bottom: 14px;
+        }
+
+        .post-meta b {
+        color: var(--text-main);
+        }
+
+        .post-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        }
+
+        .badge {
+        padding: 4px 9px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        }
+
+        .badge-voting {
+        color: var(--warning);
+        border-color: rgba(255, 212, 0, 0.4);
+        }
+
+        .badge-challenge {
+        color: var(--success);
+        border-color: rgba(0, 186, 124, 0.4);
+        }
+
+        .badge-closed {
+        color: var(--text-muted);
+        }
+
+        /* =========================
+        MODAL
+        ========================= */
+
+        .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(91, 112, 131, 0.35);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+        padding: 20px;
+        }
+
+        .modal {
+        width: 100%;
+        max-width: 520px;
+        background: var(--bg-main);
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        overflow: hidden;
+        box-shadow: 0 0 60px rgba(0, 0, 0, 0.7);
+        }
+
+        .modal-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        }
+
+        .modal-header h3 {
+        margin: 0;
+        }
+
+        .modal-close {
+        background: transparent;
+        color: var(--text-main);
+        border: none;
+        font-size: 24px;
+        }
+
+        .modal-body {
+        padding: 20px;
+        }
+
+        .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+        padding: 0 20px 20px;
+        }
+
+        /* =========================
+        EMPTY
+        ========================= */
+
+        .empty-state {
+        text-align: center;
+        color: var(--text-muted);
+        padding: 60px 24px;
+        }
+
+        .empty-state h3 {
+        color: var(--text-main);
+        }
+
+        /* =========================
+        RESPONSIVE
+        ========================= */
+
+        @media (max-width: 1100px) {
+        .app-shell {
+            grid-template-columns: 88px minmax(0, 650px);
+        }
+
+        .right-panel {
+            display: none;
+        }
+
+        .sidebar {
+            width: 88px;
+        }
+
+        .sidebar-logo {
+            padding-left: 0;
+            text-align: center;
+        }
+
+        .nav-label,
+        .user-meta {
+            display: none;
+        }
+
+        .nav-btn {
+            justify-content: center;
+            padding: 14px;
+        }
+
+        .sidebar-user {
+            justify-content: center;
+        }
+        }
+
+        @media (max-width: 720px) {
+        .app-shell {
+            grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+            position: fixed;
+            bottom: 0;
+            top: auto;
+            height: 66px;
+            width: 100%;
+            z-index: 50;
+            border-right: none;
+            border-top: 1px solid var(--border);
+            background: rgba(0, 0, 0, 0.92);
+            backdrop-filter: blur(12px);
+            padding: 6px;
+        }
+
+        .sidebar-logo,
+        .sidebar-user {
+            display: none;
+        }
+
+        .sidebar-nav {
+            flex-direction: row;
+            justify-content: space-around;
+            height: 100%;
+        }
+
+        .nav-btn {
+            font-size: 20px;
+            padding: 10px;
+        }
+
+        .main-container {
+            border-right: none;
+            padding-bottom: 76px;
+        }
+
+        .form-row,
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+        }
+</style>
+<body>
+    <div id="app"></div>
+
+<script>
+    const app = document.getElementById("app");
+    let postsPage = 1;
+    let allPostsPage = true;
+    let state = {
+    isAuthenticated: false,
+    currentUser: {
+        id: 1,
+        name: "Player One",
+        username: "player1",
+        email: "player1@gathel.local",
+        pointsBalance: 100,
+        moneyBalance: 2500,
+        activity: [
+        "Creó una proposición",
+        "Votó en 3 proposiciones",
+        "Ganó una predicción",
+        "Canjeó puntos en un comercio"
+        ]
+    },
+    currentView: "home",
+    propositions: [
+        {
+        id: 1,
+        title: "Subir una historia corriendo 5 km",
+        description: "El jugador debe subir evidencia en una red social mostrando que completó una carrera de 5 km.",
+        votingStart: "2026-06-18T08:00",
+        votingEnd: "2026-06-20T20:00",
+        challengeStart: "2026-06-21T08:00",
+        challengeEnd: "2026-06-25T20:00",
+        createdBy: "player1",
+        targetUser: "runnerCR",
+        status: "voting",
+        externalLink: "https://instagram.com/post/demo"
+        },
+        {
+        id: 2,
+        title: "Publicar video tocando guitarra",
+        description: "El jugador debe subir un video tocando una canción completa en guitarra.",
+        votingStart: "2026-06-10T08:00",
+        votingEnd: "2026-06-12T20:00",
+        challengeStart: "2026-06-13T08:00",
+        challengeEnd: "2026-06-30T20:00",
+        createdBy: "musicFan",
+        targetUser: "guitarPlayer",
+        status: "challenge",
+        externalLink: "https://tiktok.com/demo"
+        },
+        {
+        id: 3,
+        title: "Hacer una donación verificable",
+        description: "El usuario debe publicar evidencia de una donación realizada a una organización local.",
+        votingStart: "2026-05-01T08:00",
+        votingEnd: "2026-05-02T20:00",
+        challengeStart: "2026-05-03T08:00",
+        challengeEnd: "2026-05-10T20:00",
+        createdBy: "gathelAdmin",
+        targetUser: "player2",
+        status: "closed",
+        externalLink: ""
+        }
+    ]
+    };
+
+    /* =========================
+    HELPERS
+    ========================= */
+
+    function formatDate(value) {
+    if (!value) return "No definida";
+    const date = new Date(value);
+
+    return date.toLocaleString("es-CR", {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
+    });
+    }
+
+    function getInitials(name) {
+    return name
+        .split(" ")
+        .map(part => part[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase();
+    }
+
+    function setView(view) {
+    state.currentView = view;
+    renderApp();
+    }
+
+    function logout() {
+    state.isAuthenticated = false;
+    state.currentView = "home";
+    renderApp();
+    }
+
+    function showAlert(message) {
+    alert(message);
+    }
+
+    /* =========================
+    LOGIN
+    ========================= */
+
+    function renderLogin() {
+    app.innerHTML = `
+        <main class="login-page">
+        <section class="login-card">
+            <div class="login-logo">⚡</div>
+            <h1>Gathel</h1>
+            <p>Predicciones sociales validadas con IA.</p>
+
+            <form id="loginForm">
+            <div class="form-group">
+                <label for="email">Correo</label>
+                <input
+                class="form-control"
+                id="email"
+                type="email"
+                placeholder="usuario@gathel.com"
+                autocomplete="email"
+                required
+                />
+            </div>
+
+            <div class="form-group">
+                <label for="password">Contraseña</label>
+                <input
+                class="form-control"
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                autocomplete="current-password"
+                required
+                />
+            </div>
+
+            <div id="loginError" class="login-error"></div>
+
+            <button class="btn btn-primary btn-full" type="submit">
+                Iniciar sesión
+            </button>
+            </form>
+        </section>
+        </main>
+    `;
+
+    document.getElementById("loginForm").addEventListener("submit", handleLogin);
+    }
+
+    async function ValidarUsuario(email, pass)
+    {
+        const url = "/ValidarPass";
+        let retVal = -1
+
+        const response = await fetch(url, {
+            method: "POST", 
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ email: email, pass: pass })
+        });
+        const datos = await response.json();
+        for (let i=0;i<datos.id.length;i++) { retVal = datos.id[i].valido}
+        return retVal;
+    }
+
+    async function ObtenerUsuario(id)
+    {
+        const url = "/ObtenerUsuario";
+
+        const response = await fetch(url, {
+            method: "POST", 
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ id: id })
+        });
+        const datos = await response.json();
+        console.log(datos)
+        return datos.usuario[0];
+    }
+
+    async function handleLogin(event) {
+        event.preventDefault();
+
+        const email = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value.trim();
+        const loginError = document.getElementById("loginError");
+
+        if (!email || !password) {
+            loginError.textContent = "Debe ingresar correo y contraseña.";
+            return;
+        }
+        let id = await ValidarUsuario(email, password);
+        console.log(id)
+        if(id == -1) {
+            loginError.textContent = "Usuario o contraseña incorrecta.";
+            return;
+        }
+
+        // Si llegamos hasta aquí es porque sí es
+        state.currentUser = await ObtenerUsuario(id)
+        state.isAuthenticated = true;
+        state.currentView = "home";
+        renderApp();
+    }
+
+    /* =========================
+    LAYOUT
+    ========================= */
+
+    function renderAppLayout() {
+    app.innerHTML = `
+        <div class="app-shell">
+        <aside class="sidebar">
+            <div class="sidebar-logo">⚡</div>
+
+            <nav class="sidebar-nav">
+            <button class="nav-btn ${state.currentView === "home" ? "active" : ""}" data-view="home">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-label">Inicio</span>
+            </button>
+
+            <button class="nav-btn ${state.currentView === "explore" ? "active" : ""}" data-view="explore">
+                <span class="nav-icon">🔎</span>
+                <span class="nav-label">Explorar</span>
+            </button>
+
+            <button class="nav-btn ${state.currentView === "my-propositions" ? "active" : ""}" data-view="my-propositions">
+                <span class="nav-icon">📝</span>
+                <span class="nav-label">Mis Proposiciones</span>
+            </button>
+
+            <button class="nav-btn logout-btn" id="logoutBtn">
+                <span class="nav-icon">🚪</span>
+                <span class="nav-label">LogOut</span>
+            </button>
+            </nav>
+
+            <div class="sidebar-user">
+            <div class="avatar">${getInitials(state.currentUser.name)}</div>
+            <div class="user-meta">
+                <strong>${state.currentUser.name}</strong>
+                <span>@${state.currentUser.username}</span>
+            </div>
+            </div>
+        </aside>
+
+        <main class="main-container">
+            <header class="main-header">
+            <h2>${getViewTitle()}</h2>
+            </header>
+
+            <section class="main-content" id="mainContent"></section>
+        </main>
+
+        <aside class="right-panel">
+            <div class="info-card">
+            <h3>Gathel</h3>
+            <p>
+                Plataforma de predicciones sociales basada en retos, puntos,
+                dinero real, redes sociales e inteligencia artificial.
+            </p>
+            </div>
+
+            <div class="info-card">
+            <h3>Estado</h3>
+            <p>
+                Interfaz demo. Las funciones de conexión con base de datos
+                deben agregarse luego en los lugares indicados del JavaScript.
+            </p>
+            </div>
+        </aside>
+        </div>
+    `;
+
+    document.querySelectorAll(".nav-btn[data-view]").forEach(button => {
+        button.addEventListener("click", () => setView(button.dataset.view));
+    });
+
+    document.getElementById("logoutBtn").addEventListener("click", logout);
+
+    renderCurrentView();
+    }
+
+    function getViewTitle() {
+    const titles = {
+        home: "Inicio",
+        explore: "Explorar",
+        "my-propositions": "Mis Proposiciones",
+        create: "Crear Proposición"
+    };
+
+    return titles[state.currentView] || "Gathel";
+    }
+
+    async function renderCurrentView() {
+        const mainContent = document.getElementById("mainContent");
+
+        if (state.currentView === "home") {
+            renderHome(mainContent);
+            return;
+        }
+
+        if (state.currentView === "create") {
+            renderCreateProposition(mainContent);
+            return;
+        }
+
+        if (state.currentView === "explore") {
+            postsPage = 1;
+            allPostsPage = true;
+            const datos = await ObtenerProposiciones(postsPage, true);
+            state.propositions = datos.propositions;
+            console.log(state.propositions);
+
+            renderPropositions(mainContent, state.propositions);
+            return;
+        }
+
+        if (state.currentView === "my-propositions") {
+            postsPage = 1;
+            allPostsPage = true;
+            const datos = await ObtenerProposicionesPropias();
+            state.propositions = datos.propositions;
+            console.log(state.propositions);
+
+            renderPropositions(mainContent, state.propositions, true);
+            return;
+        }
+
+        renderHome(mainContent);
+    }
+
+    /* =========================
+    HOME
+    ========================= */
+
+    function renderHome(container) {
+    container.innerHTML = `
+        <div class="dashboard">
+        <section class="dashboard-hero">
+            <h1>Bienvenido, ${state.currentUser.name}</h1>
+            <p>Administre sus proposiciones, predicciones, puntos y actividad.</p>
+
+            <button class="btn btn-primary" id="createPropositionBtn">
+            Crear Proposición
+            </button>
+        </section>
+
+        <section class="stats-grid">
+            <article class="stat-card">
+            <div class="stat-label">Mi balance de puntos</div>
+            <div class="stat-value">${state.currentUser.pointsBalance} pts</div>
+            </article>
+
+            <article class="stat-card">
+            <div class="stat-label">Mi balance de dinero real</div>
+            <div class="stat-value">$${state.currentUser.moneyBalance.toFixed(2)}</div>
+            </article>
+        </section>
+
+        <section class="info-card">
+            <h3>Mi actividad básica de jugador</h3>
+            <div class="activity-list">
+                ¡Participa para ganar más punto!
+            </div>
+        </section>
+        </div>
+    `;
+
+    document.getElementById("createPropositionBtn").addEventListener("click", () => {
+        setView("create");
+    });
+    }
+
+    /* =========================
+    CREATE PROPOSITION
+    ========================= */
+
+    function renderCreateProposition(container) {
+        container.innerHTML = `
+            <div class="form-view">
+            <section class="form-card">
+                <h3>Nueva Proposición</h3>
+
+                <form id="createPropositionForm">
+                <div class="form-group">
+                    <label>Tipo de proposición</label>
+
+                    <div class="radio-group">
+                    <label class="radio-option">
+                        <input type="radio" name="targetType" value="self" checked />
+                        Para mí mismo
+                    </label>
+
+                    <label class="radio-option">
+                        <input type="radio" name="targetType" value="other" />
+                        Para otro jugador
+                    </label>
+                    </div>
+                </div>
+
+                <div class="form-group" id="targetUserGroup" style="display: none;">
+                    <label for="targetUser">Usuario que debe cumplir el reto</label>
+                    <input
+                    class="form-control"
+                    id="targetUser"
+                    type="text"
+                    placeholder="@usuario"
+                    />
+                </div>
+
+                <div class="form-group">
+                    <label for="title">Título</label>
+                    <input
+                    class="form-control"
+                    id="title"
+                    type="text"
+                    placeholder="Ej: Subir una historia corriendo 5 km"
+                    required
+                    />
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Descripción</label>
+                    <textarea
+                    class="form-control"
+                    id="description"
+                    placeholder="Describa claramente el reto o acción que debe cumplirse."
+                    required
+                    ></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                    <label for="votingStart">Fecha de inicio de votación</label>
+                    <input class="form-control" id="votingStart" type="datetime-local" required />
+                    </div>
+
+                    <div class="form-group">
+                    <label for="votingEnd">Fecha de cierre de votación</label>
+                    <input class="form-control" id="votingEnd" type="datetime-local" required />
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                    <label for="challengeStart">Fecha de inicio del reto</label>
+                    <input class="form-control" id="challengeStart" type="datetime-local" required />
+                    </div>
+
+                    <div class="form-group">
+                    <label for="challengeEnd">Fecha de cierre del reto</label>
+                    <input class="form-control" id="challengeEnd" type="datetime-local" required />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="externalLink">Enlace externo a post de otra red social</label>
+                    <input
+                    class="form-control"
+                    id="externalLink"
+                    type="url"
+                    placeholder="https://instagram.com/..."
+                    />
+                </div>
+
+                <div class="form-actions">
+                    <button class="btn btn-secondary" type="button" id="cancelCreateBtn">
+                    Cancelar
+                    </button>
+
+                    <button class="btn btn-primary" type="submit">
+                    Crear
+                    </button>
+                </div>
+                </form>
+            </section>
+            </div>
+        `;
+
+        const targetTypeInputs = document.querySelectorAll("input[name='targetType']");
+        const targetUserGroup = document.getElementById("targetUserGroup");
+
+        targetTypeInputs.forEach(input => {
+            input.addEventListener("change", () => {
+            const selected = document.querySelector("input[name='targetType']:checked").value;
+            targetUserGroup.style.display = selected === "other" ? "block" : "none";
+            });
+        });
+
+        document.getElementById("cancelCreateBtn").addEventListener("click", () => {
+            setView("home");
+        });
+
+        document.getElementById("createPropositionForm").addEventListener("submit", handleCreateProposition);
+    }
+    
+    async function CrearProposicion(proposicion)
+    {
+        const url = "/CrearProposicion";
+
+        const response = await fetch(url, {
+            method: "POST", 
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ 
+                            title: proposicion.title,
+                            description: proposicion.description,
+                            votingStart: proposicion.votingStart,
+                            votingEnd: proposicion.votingEnd,
+                            challengeStart: proposicion.challengeStart,
+                            challengeEnd: proposicion.challengeEnd,
+                            externalLink: proposicion.externalLink,
+                            createdBy: proposicion.createdBy,
+                            targetUser: proposicion.targetUser })
+        });
+        const datos = await response.json();
+        return datos;
+     }
+    
+    async function UsernameExiste(user)
+    {
+        const url = "/UsernameExiste";
+        let retVal = -1;
+        const response = await fetch(url, {
+            method: "POST", 
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ user: user })
+        });
+        const datos = await response.json();
+        
+        for (let i=0;i<datos.id.length;i++) { retVal = datos.id[i].id}
+        return retVal;
+     }
+
+    async function handleCreateProposition(event) {
+        event.preventDefault();
+        console.log("Parte1");
+
+        const targetType = document.querySelector("input[name='targetType']:checked").value;
+        const targetUserValue = document.getElementById("targetUser").value.trim();
+
+        let newProposition = {
+            id: "",
+            title: document.getElementById("title").value.trim(),
+            description: document.getElementById("description").value.trim(),
+            votingStart: document.getElementById("votingStart").value,
+            votingEnd: document.getElementById("votingEnd").value,
+            challengeStart: document.getElementById("challengeStart").value,
+            challengeEnd: document.getElementById("challengeEnd").value,
+            externalLink: document.getElementById("externalLink").value.trim(),
+            createdBy: state.currentUser.id,
+            targetUser: targetType === "self" ? state.currentUser.username : targetUserValue,
+            status: "voting"
+        };
+
+        console.log(newProposition);
+        if (targetType === "other" && !targetUserValue) {
+            showAlert("Debe indicar el usuario que debe cumplir el reto.");
+            return;
+        }
+
+        if (!(targetType === "self"))
+        {
+            let idTarget = await UsernameExiste(targetUserValue);
+            if (idTarget == -1){
+                showAlert("El username no pertenece a ningún usuario");
+                return;
+            }
+            newProposition.targetUser = idTarget;
+        }
+        
+        console.log(newProposition.targetUser);
+        if (!CrearProposicion(newProposition)) {
+            showAlert("Sucedión un error al crear.");
+            return;
+        }
+        console.log("oh dios");
+
+        setView("explore");
+    }
+
+    /* =========================
+    PROPOSITIONS
+    ========================= */
+    async function ObtenerProposiciones(num, todas)
+    {
+        const url = todas ? "/ObtenerProposiciones" : "/ObtenerProposicionesAbiertas";
+
+        const response = await fetch(url, {
+            method: "POST", 
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ num: num })
+        });
+        const datos = await response.json();
+        return datos;
+
+    }
+
+    async function ObtenerProposicionesPropias()
+    {
+        const url = "/ObtenerProposicionesPropias";
+
+        const response = await fetch(url, {
+            method: "POST", 
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ id: state.currentUser.id })
+        });
+        const datos = await response.json();
+        return datos;
+
+    }
+
+    function FormatearRenderPropositions()
+    {
+        document.querySelectorAll("[data-vote]").forEach(button => {
+            button.addEventListener("click", () => {
+            const id = Number(button.dataset.id);
+            const vote = button.dataset.vote;
+            handleVote(id, vote);
+            });
+        });
+
+        document.querySelectorAll("[data-predict]").forEach(button => {
+            button.addEventListener("click", () => {
+            const id = Number(button.dataset.predict);
+            openPredictionModal(id);
+            });
+        });
+    }
+
+    async function renderPropositions(container, propositions, isMine = false) {
+        if (!propositions.length) {
+            container.innerHTML = `
+            <div class="empty-state">
+                <h3>No hay proposiciones</h3>
+                <p>${isMine ? "Todavía no ha creado proposiciones." : "No hay proposiciones disponibles."}</p>
+            </div>
+            `;
+            return;
+        }
+        container.innerHTML = `
+            ${isMine ? "" : '<button class="btn btn-primary" id="todasPropositionBtn">Todas las Proposiciones </button><button class="btn btn-primary" id="openPropositionBtn">Proposiciones sin cerrar</button>'}
+            
+            <div class="feed">
+            ${propositions.map(proposition => createPropositionPost(proposition)).join("")}
+            </div>
+            ${isMine ? "" : '<button class="btn btn-primary" id="morePropositionBtn">Más proposiciones</button>' }
+            
+        `;
+        
+        FormatearRenderPropositions();
+
+        document.getElementById("todasPropositionBtn").addEventListener("click", async () => {
+            postsPage = 1;
+            allPostsPage = true;
+            let datos = await ObtenerProposiciones(postsPage, allPostsPage);
+            state.propositions = datos.propositions;
+            document.getElementsByClassName("feed")[0].innerHTML = ` ${state.propositions.map(proposition => createPropositionPost(proposition)).join("")} `;
+            FormatearRenderPropositions();
+        });
+
+        document.getElementById("openPropositionBtn").addEventListener("click", async () => {
+            postsPage = 1;
+            allPostsPage = false;
+            let datos = await ObtenerProposiciones(postsPage, allPostsPage);
+            state.propositions = datos.propositions;
+            document.getElementsByClassName("feed")[0].innerHTML = ` ${state.propositions.map(proposition => createPropositionPost(proposition)).join("")} `;
+            FormatearRenderPropositions();
+        });
+
+        document.getElementById("morePropositionBtn").addEventListener("click", async () => {
+            postsPage +=1;
+            let datos = await ObtenerProposiciones(postsPage, allPostsPage);
+            state.propositions = state.propositions.concat(datos.propositions);
+            document.getElementsByClassName("feed")[0].innerHTML += ` ${datos.propositions.map(proposition => createPropositionPost(proposition)).join("")} `;
+            FormatearRenderPropositions();
+        });
+    }
+
+    function createPropositionPost(proposition) {
+        const badge = getStatusBadge(proposition.status);
+
+        const voteButtons = proposition.status === "voting"
+            ? `
+            <button class="btn btn-small btn-green" data-vote="YES" data-id="${proposition.id}">
+                Votar Sí
+            </button>
+
+            <button class="btn btn-small btn-danger" data-vote="NO" data-id="${proposition.id}">
+                Votar No
+            </button>
+            `
+            : "";
+
+        const predictionButton = proposition.status === "challenge"
+            ? `
+            <button class="btn btn-small btn-primary" data-predict="${proposition.id}">
+                Hacer Predicción
+            </button>
+            `
+            : "";
+
+        return `
+            <article class="post-card">
+            <div class="post-avatar">
+                ${getInitials(proposition.createdBy)}
+            </div>
+
+            <div class="post-body">
+                <div class="post-header">
+                <strong>@${proposition.createdBy}</strong>
+                <span>propuso para</span>
+                <strong>@${proposition.targetUser}</strong>
+                ${badge}
+                </div>
+
+                <div class="post-title">${proposition.title}</div>
+
+                <p class="post-description">${proposition.description}</p>
+
+                <div class="post-meta">
+                <div><b>Inicio votación:</b> ${formatDate(proposition.votingStart)}</div>
+                <div><b>Cierre votación:</b> ${formatDate(proposition.votingEnd)}</div>
+                <div><b>Inicio reto:</b> ${formatDate(proposition.challengeStart)}</div>
+                <div><b>Cierre reto:</b> ${formatDate(proposition.challengeEnd)}</div>
+                <div><b>Creada por:</b> @${proposition.createdBy}</div>
+                <div><b>Debe cumplir:</b> @${proposition.targetUser}</div>
+                ${
+                    proposition.externalLink
+                    ? `<div><b>Enlace externo:</b> <a href="${proposition.externalLink}" target="_blank">${proposition.externalLink}</a></div>`
+                    : ""
+                }
+                </div>
+
+                <div class="post-actions">
+                ${voteButtons}
+                ${predictionButton}
+                </div>
+            </div>
+            </article>
+        `;
+    }
+
+    function getStatusBadge(status) {
+        if (status === "voting") {
+            return `<span class="badge badge-voting">En votación</span>`;
+        }
+
+        if (status === "challenge") {
+            return `<span class="badge badge-challenge">Reto activo</span>`;
+        }
+
+        if (status === "canceled") {
+            return `<span class="badge badge-closed">Reto Cancelado</span>`;
+        }
+
+        if (status === "completed") {
+            return `<span class="badge badge-challenge">Reto Completado</span>`;
+        }
+
+        return `<span class="badge badge-closed">Cerrada</span>`;
+    }
+
+    function handleVote(propositionId, vote) {
+        // Aquí se conectaría con el backend.
+        // Ejemplo futuro:
+        // await votePropositionRequest(propositionId, vote);
+
+        showAlert(`Voto registrado: ${vote} en proposición #${propositionId}`);
+    }
+
+    /* =========================
+    PREDICTION MODAL
+    ========================= */
+
+    function openPredictionModal(propositionId) {
+    let proposition = state.propositions.find(item => item.id == propositionId);
+
+    if (!proposition) {
+        showAlert("No se encontró la proposición.");
+        return;
+    }
+
+    const modal = document.createElement("div");
+    modal.className = "modal-backdrop";
+    modal.id = "predictionModal";
+
+    modal.innerHTML = `
+        <div class="modal">
+        <div class="modal-header">
+            <h3>Hacer Predicción</h3>
+            <button class="modal-close" id="closePredictionModal">×</button>
+        </div>
+
+        <form id="predictionForm">
+            <div class="modal-body">
+            <p class="post-description">
+                <strong>${proposition.title}</strong>
+            </p>
+
+            <div class="form-group">
+                <label for="decision">Decisión</label>
+                <select class="form-control" id="decision" required>
+                <option value="">Seleccione una opción</option>
+                <option value="WILL_HAPPEN">Sí se cumplirá</option>
+                <option value="WILL_NOT_HAPPEN">No se cumplirá</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="currencyType">Tipo de moneda</label>
+                <select class="form-control" id="currencyType" required>
+                <option value="">Seleccione una opción</option>
+                <option value="POINTS">Puntos</option>
+                <option value="USD">USD</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="amount">Cantidad de dinero / puntos</label>
+                <input
+                class="form-control"
+                id="amount"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="Ej: 1 o 10.00"
+                required
+                />
+            </div>
+            </div>
+
+            <div class="modal-actions">
+            <button class="btn btn-secondary" type="button" id="cancelPredictionBtn">
+                Cancelar
+            </button>
+
+            <button class="btn btn-primary" type="submit">
+                Aceptar
+            </button>
+            </div>
+        </form>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    document.getElementById("closePredictionModal").addEventListener("click", closePredictionModal);
+    document.getElementById("cancelPredictionBtn").addEventListener("click", closePredictionModal);
+
+    document.getElementById("predictionForm").addEventListener("submit", event => {
+        event.preventDefault();
+        handlePredictionSubmit(propositionId);
+    });
+    }
+
+    function closePredictionModal() {
+    const modal = document.getElementById("predictionModal");
+
+    if (modal) {
+        modal.remove();
+    }
+    }
+
+    function handlePredictionSubmit(propositionId) {
+    const decision = document.getElementById("decision").value;
+    const currencyType = document.getElementById("currencyType").value;
+    const amount = Number(document.getElementById("amount").value);
+
+    if (!decision || !currencyType || amount <= 0) {
+        showAlert("Debe completar todos los campos correctamente.");
+        return;
+    }
+
+    const predictionPayload = {
+        propositionId,
+        decision,
+        currencyType,
+        amount
+    };
+
+    // Aquí se conectaría con el backend.
+    // Ejemplo futuro:
+    // await createPredictionRequest(predictionPayload);
+
+    console.log("Predicción creada:", predictionPayload);
+
+    closePredictionModal();
+    showAlert("Predicción registrada correctamente.");
+    }
+
+    /* =========================
+    ROOT RENDER
+    ========================= */
+
+    function renderApp() {
+    if (!state.isAuthenticated) {
+        renderLogin();
+        return;
+    }
+
+    renderAppLayout();
+    }
+
+    renderApp();
+</script>
+</body>
+</html>

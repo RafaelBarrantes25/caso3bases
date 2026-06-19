@@ -1,0 +1,66 @@
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <style>
+        h1 {color:aquamarine;}
+    </style>
+        <h1>hoy somos </h1>
+</body>
+<script>
+async function omg(msj)
+{
+    const url = "/omg";
+
+    const response = await fetch(url, {
+        method: "POST", 
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ msj: msj })
+    });
+    const datos = await response.json();
+    console.log(datos)
+
+}
+async function xd(msj)
+{
+    const url = "/xd";
+
+    const response = await fetch(url, {
+        method: "POST", 
+        headers: {
+            "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ msj: msj })
+        });
+    const datos = await response.json();
+    console.log(datos)
+
+}
+async function labd()
+{
+    const url = "/labd";
+
+    const response = await fetch(url, {
+        method: "POST", 
+        headers: {
+            "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ })
+        });
+    const datos = await response.json();
+    console.log(datos)
+
+}
+
+
+</script>
+</html>
+
+
